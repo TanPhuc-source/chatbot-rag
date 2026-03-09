@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
-import { v4 as uuid } from "uuid";
 import { useChatStore } from "@/store/chatStore";
+
+const uid = () => crypto.randomUUID();
 import { useStream } from "./useStream";
 import type { Message, SourceDoc } from "@/types";
 
@@ -20,7 +21,7 @@ export function useChat() {
 
       // Thêm message của user
       const userMsg: Message = {
-        id: uuid(),
+        id: uid(),
         role: "user",
         content: question,
         createdAt: new Date(),
@@ -29,7 +30,7 @@ export function useChat() {
 
       // Placeholder cho assistant đang stream
       const assistantMsg: Message = {
-        id: uuid(),
+        id: uid(),
         role: "assistant",
         content: "",
         isStreaming: true,

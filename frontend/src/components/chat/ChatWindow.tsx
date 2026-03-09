@@ -1,82 +1,80 @@
 import { useEffect, useRef } from "react";
-import { BookOpen } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import InputBar from "./InputBar";
 import { useChat } from "@/hooks/useChat";
 
-export default function ChatWindow() {
-  const { messages, isStreaming, sendMessage } = useChat();
-  const bottomRef = useRef<HTMLDivElement>(null);
+const SUGGESTIONS = [
+  { icon: "🎓", text: "Thủ tục đăng ký thi VSTEP như thế nào?" },
+  { icon: "💰", text: "Học phí các khóa ngoại ngữ là bao nhiêu?" },
+  { icon: "📜", text: "Trung tâm có những chứng chỉ tiếng Anh nào?" },
+  { icon: "📅", text: "Lịch khai giảng các khóa học sắp tới?" },
+];
 
-  // Auto scroll khi có message mới
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const isEmpty = messages.length === 0;
-
+function WelcomeScreen({ onSuggest }: { onSuggest: (q: string) => void }) {
   return (
-    <div className="flex flex-col h-full">
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        {isEmpty ? (
-          <EmptyState />
-        ) : (
-          <div className="max-w-3xl mx-auto flex flex-col gap-6">
-            {messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))}
-            <div ref={bottomRef} />
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 32, padding: "32px 24px" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ position: "relative", display: "inline-block", marginBottom: 20 }}>
+          <div style={{ width: 76, height: 76, borderRadius: 22, background: "linear-gradient(135deg,#1a5fb4 0%,#2a80d8 60%,#0ea5e9 100%)", boxShadow: "0 8px 32px rgba(26,95,180,0.35), 0 0 0 8px rgba(26,95,180,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Sparkles size={34} color="white" />
           </div>
-        )}
+          <span style={{ position: "absolute", bottom: 4, right: 4, width: 12, height: 12, borderRadius: "50%", background: "#10b981", border: "2px solid var(--bg-base)", display: "block", boxShadow: "0 0 0 2px rgba(16,185,129,0.3)" }} />
+        </div>
+        <h2 className="font-display" style={{ fontSize: 26, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
+          Xin chào! 👋
+        </h2>
+        <p style={{ fontSize: 15, color: "var(--brand)", margin: "0 0 6px", fontWeight: 500 }}>Tôi có thể giúp gì cho bạn?</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
+          Trợ lý AI · Trung tâm Ngoại ngữ &amp; Tin học · ĐH Đồng Tháp
+        </p>
       </div>
 
-      {/* Input */}
-      <div className="px-4 pb-6 pt-2 max-w-3xl mx-auto w-full">
-        <InputBar onSend={sendMessage} disabled={isStreaming} />
-        <p className="text-center text-xs text-muted mt-3">
-          FLIC có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.
+      <div style={{ width: "100%", maxWidth: 540 }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textAlign: "center", marginBottom: 14, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          Câu hỏi thường gặp
         </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+          {SUGGESTIONS.map(({ icon, text }) => (
+            <button
+              key={text}
+              onClick={() => onSuggest(text)}
+              className="suggest-card"
+              style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "13px 14px", borderRadius: 14, textAlign: "left", background: "var(--bg-1)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)", cursor: "pointer" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-mid)"; e.currentTarget.style.boxShadow = "var(--shadow-md)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "var(--shadow-sm)"; }}
+            >
+              <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500, lineHeight: 1.45 }}>{text}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function EmptyState() {
-  const suggestions = [
-    "Học phí lớp Python cơ bản là bao nhiêu?",
-    "Sinh viên hộ nghèo được giảm bao nhiêu % học phí?",
-    "Lịch thi VSTEP năm 2025 như thế nào?",
-    "Cách đăng ký lớp ngoại ngữ online?",
-  ];
+export default function ChatWindow() {
+  const { messages, isStreaming, sendMessage } = useChat();
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { sendMessage } = useChat();
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-8 text-center px-4">
-      {/* Logo */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
-          <BookOpen size={28} className="text-accent" />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      {messages.length === 0 ? (
+        <WelcomeScreen onSuggest={sendMessage} />
+      ) : (
+        <div className="messages-scroll" style={{ padding: "24px 16px" }}>
+          <div style={{ maxWidth: 740, width: "100%", margin: "0 auto", display: "flex", flexDirection: "column", gap: 18 }}>
+            {messages.map(msg => <MessageBubble key={msg.id} message={msg} />)}
+            <div ref={bottomRef} />
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold text-white tracking-tight">FLIC</h1>
-          <p className="text-muted text-sm mt-1">Trợ lý tư vấn học thuật · Trung tâm Ngoại ngữ & Tin học</p>
-        </div>
-      </div>
-
-      {/* Suggestions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl w-full">
-        {suggestions.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => sendMessage(s)}
-            className="text-left text-sm px-4 py-3 rounded-xl bg-surface border border-border text-[#aaa] hover:border-accent/30 hover:text-white hover:bg-accent/5 transition-all"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      )}
+      <InputBar onSend={sendMessage} disabled={isStreaming} />
     </div>
   );
 }

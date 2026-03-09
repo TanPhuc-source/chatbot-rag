@@ -10,18 +10,17 @@ export default function SourceCard({ source }: Props) {
   const page = source.first_page ? ` · tr.${source.first_page}` : "";
 
   return (
-    <div className="text-xs rounded-xl border border-border bg-surface/60 overflow-hidden max-w-xs">
+    <div style={{ fontSize: 11, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-2)", overflow: "hidden", maxWidth: 240 }}>
       <button
-        onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-2 px-3 py-2 w-full hover:bg-border/30 transition-colors text-left"
+        onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", width: "100%", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", textAlign: "left" }}
       >
-        <FileText size={12} className="text-accent flex-shrink-0" />
-        <span className="text-[#aaa] truncate flex-1">{name}{page}</span>
-        {open ? <ChevronUp size={12} className="text-muted" /> : <ChevronDown size={12} className="text-muted" />}
+        <FileText size={11} style={{ color: "var(--brand)", flexShrink: 0 }} />
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}{page}</span>
+        {open ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
       </button>
-
       {open && (
-        <div className="px-3 pb-3 pt-0 text-muted border-t border-border/50 leading-relaxed">
+        <div style={{ padding: "6px 10px 8px", borderTop: "1px solid var(--border)", color: "var(--text-muted)", lineHeight: 1.5, fontSize: 11 }}>
           {source.excerpt}
         </div>
       )}
