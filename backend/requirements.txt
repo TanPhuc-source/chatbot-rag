@@ -1,0 +1,47 @@
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+
+# Settings & env
+pydantic-settings==2.7.0
+pydantic[email]==2.10.4
+python-dotenv==1.0.1
+
+# Database
+sqlalchemy==2.0.36
+alembic==1.14.0
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Document extraction & chunking
+kreuzberg[easyocr]==4.4.3
+
+# Vector DB
+chromadb==0.6.3
+
+# LLM providers — Provider pattern
+groq==0.13.1
+ollama==0.4.7
+
+# Embeddings
+sentence-transformers==3.3.1      # local embeddings (multilingual)
+langchain-core==0.3.28
+langchain-community==0.3.13
+
+# RAG utilities
+rank-bm25==0.2.2                  # BM25 hybrid search
+flashrank==0.2.9                  # reranker nhẹ, chạy local
+
+# Evaluation
+ragas==0.2.11
+
+# Utils
+loguru==0.7.3
+tenacity==9.0.0                   # retry logic
+httpx==0.28.1
+anyio==4.7.0

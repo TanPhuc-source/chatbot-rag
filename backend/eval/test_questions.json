@@ -1,0 +1,14 @@
+[
+  {
+    "question": "Định nghĩa của học máy là gì?",
+    "ground_truth": "Học máy là một nhánh của trí tuệ nhân tạo cho phép máy tính học từ dữ liệu mà không cần lập trình tường minh."
+  },
+  {
+    "question": "Sự khác biệt giữa supervised learning và unsupervised learning?",
+    "ground_truth": "Supervised learning dùng dữ liệu có nhãn, unsupervised learning dùng dữ liệu không có nhãn."
+  },
+  {
+    "question": "Gradient descent là gì và tại sao quan trọng?",
+    "ground_truth": "Gradient descent là thuật toán tối ưu hóa dùng để tối thiểu hóa hàm mất mát trong quá trình huấn luyện mô hình."
+  }
+]
