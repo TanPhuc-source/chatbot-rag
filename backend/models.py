@@ -1,5 +1,6 @@
 # backend/models.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
@@ -7,11 +8,16 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False) # Thêm username
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    role = Column(String, default="user") # 'user' hoặc 'admin'
     is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships (Giúp truy vấn user.documents hoặc user.chat_sessions dễ dàng)
+    documents = relationship("Document", back_populates="owner")
+    chat_sessions = relationship("ChatSession", back_populates="owner")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -22,14 +28,19 @@ class Document(Base):
     status = Column(String, default="uploaded") # uploaded, processing, indexed, error
     uploaded_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    owner = relationship("User", back_populates="documents")
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    title = Column(String) # Tiêu đề đoạn chat
+    title = Column(String) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    owner = relationship("User", back_populates="chat_sessions")
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
@@ -39,3 +50,5 @@ class ChatMessage(Base):
     role = Column(String) # 'user' hoặc 'bot'
     content = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    session = relationship("ChatSession", back_populates="messages")

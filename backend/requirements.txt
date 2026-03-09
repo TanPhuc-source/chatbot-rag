@@ -17,7 +17,7 @@ psycopg2-binary==2.9.10
 # Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-
+bcrypt==3.2.2
 # Document extraction & chunking
 kreuzberg[easyocr]==4.4.3
 
