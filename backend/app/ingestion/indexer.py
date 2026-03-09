@@ -12,6 +12,7 @@ from functools import lru_cache
 from typing import Any
 
 import chromadb
+from chromadb.config import Settings
 
 from app.config import get_settings
 from app.ingestion.loader import LoadedChunk
@@ -28,8 +29,13 @@ def _get_chroma_client() -> chromadb.PersistentClient:
     Tự động tạo thư mục chroma_data nếu chưa có.
     Không cần chạy server riêng.
     """
-    client = chromadb.PersistentClient(path=CHROMA_PATH)
-    logger.info(f"ChromaDB PersistentClient initialized at: {CHROMA_PATH}")
+    # Tắt telemetry để không bị spam log
+    client = chromadb.PersistentClient(
+        path=CHROMA_PATH, settings=Settings(anonymized_telemetry=False)
+    )
+    logger.info(
+        f"ChromaDB PersistentClient initialized at: {CHROMA_PATH} with telemetry disabled."
+    )
     return client
 
 
