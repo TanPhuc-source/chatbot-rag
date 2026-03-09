@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # Ollama (local)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3.2"
+    OLLAMA_MODEL: str = "qwen2.5:7b "
 
     # ── Embedding Provider ────────────────────────────────────
     EMBEDDING_PROVIDER: Literal["local"] = "local"

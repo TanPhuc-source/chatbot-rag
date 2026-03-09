@@ -1,14 +1,152 @@
 [
   {
-    "question": "Định nghĩa của học máy là gì?",
-    "ground_truth": "Học máy là một nhánh của trí tuệ nhân tạo cho phép máy tính học từ dữ liệu mà không cần lập trình tường minh."
+    "question": "Đăng ký lớp ngoại ngữ tại trung tâm như thế nào?",
+    "ground_truth": "Đăng ký lớp Ngoại ngữ gồm 5 bước: Bước 1 truy cập website https://nnth.dthu.edu.vn/Register.aspx, Bước 2 điền mã số sinh viên và chọn lớp phù hợp, Bước 3 và 4 chuyển khoản theo mã QR và tải hình ảnh biên lai lên web, Bước 5 nhận thông báo thành công. Lịch khai giảng cập nhật trên website và gửi qua SMS.",
+    "metadata": { "source": "FAQ", "category": "dang_ky_hoc" }
   },
   {
-    "question": "Sự khác biệt giữa supervised learning và unsupervised learning?",
-    "ground_truth": "Supervised learning dùng dữ liệu có nhãn, unsupervised learning dùng dữ liệu không có nhãn."
+    "question": "Cách đăng ký lớp ôn thi VSTEP?",
+    "ground_truth": "Đăng ký lớp ôn thi VSTEP gồm 5 bước: Bước 1 truy cập https://nnth.dthu.edu.vn/RegisterVstep.aspx, Bước 2 điền thông tin và chọn lớp, Bước 3 và 4 chuyển khoản theo hướng dẫn và tải hình ảnh lên, Bước 5 nhận thông báo thành công. Lịch khai giảng cập nhật trên web và gửi qua Zalo.",
+    "metadata": { "source": "FAQ", "category": "dang_ky_hoc" }
   },
   {
-    "question": "Gradient descent là gì và tại sao quan trọng?",
-    "ground_truth": "Gradient descent là thuật toán tối ưu hóa dùng để tối thiểu hóa hàm mất mát trong quá trình huấn luyện mô hình."
+    "question": "Phí thi chứng chỉ ngoại ngữ chuẩn đầu ra là bao nhiêu?",
+    "ground_truth": "Phí thi chứng chỉ ngoại ngữ chuẩn đầu ra (tiếng Anh, Trung, Pháp): học viên Trung tâm Ngoại ngữ và Tin học 420.000đ (bao gồm phí cấp chứng nhận), thí sinh tự do 820.000đ.",
+    "metadata": { "source": "QD_5845", "category": "le_phi_thi" }
+  },
+  {
+    "question": "Phí thi VSTEP là bao nhiêu?",
+    "ground_truth": "Phí thi VSTEP: viên chức, nhân viên và sinh viên chính quy Trường Đại học Đồng Tháp 1.000.000đ; học viên các lớp ôn VSTEP tại Trung tâm 1.300.000đ (bao gồm phí cấp chứng chỉ); thí sinh tự do 1.500.000đ.",
+    "metadata": { "source": "QD_5845", "category": "le_phi_thi" }
+  },
+  {
+    "question": "Phí thi chứng chỉ tin học (UDCNTT) là bao nhiêu?",
+    "ground_truth": "Phí thi chứng chỉ ứng dụng công nghệ thông tin cơ bản: học viên Trung tâm Ngoại ngữ và Tin học 400.000đ (bao gồm phí cấp chứng chỉ), thí sinh tự do 800.000đ.",
+    "metadata": { "source": "QD_5845", "category": "le_phi_thi" }
+  },
+  {
+    "question": "Hồ sơ đăng ký thi VSTEP gồm những gì?",
+    "ground_truth": "Hồ sơ đăng ký thi VSTEP gồm: phiếu đăng ký, 01 bản sao CCCD hoặc thẻ sinh viên, 02 ảnh 4x6. Nộp trực tiếp tại Ki-ốt 1,2 hoặc gửi bưu điện trong vòng 03 ngày. Chuyển khoản qua PVCOMBANK số tài khoản 109000916169. Lưu ý trường không hoàn lệ phí thi.",
+    "metadata": { "source": "FAQ", "category": "dang_ky_thi" }
+  },
+  {
+    "question": "Hồ sơ đăng ký thi tin học gồm những gì?",
+    "ground_truth": "Hồ sơ đăng ký thi tin học gồm: 01 phiếu đăng ký dán ảnh 4x6 và 01 CCCD photo. Đăng ký trước trên udcntt.dthu.edu.vn. Nộp trực tiếp tại Ki-ốt 1,2 hoặc gửi bưu điện. Cú pháp chuyển khoản: [MSSV/CCCD] + [Họ và tên] + [Số điện thoại] + [Thi tin học] + [Tháng thi].",
+    "metadata": { "source": "FAQ", "category": "dang_ky_thi" }
+  },
+  {
+    "question": "Lịch thi VSTEP năm 2025 có những đợt nào?",
+    "ground_truth": "Lịch thi VSTEP năm 2025 tại Trường Đại học Đồng Tháp có 12 đợt: Đợt 1 (18,19/01), Đợt 2 (22,23/02), Đợt 3 (29,30/03), Đợt 4 (26,27/04), Đợt 5 (31/05-01/06), Đợt 6 (28,29/06), Đợt 7 (26,27/07), Đợt 8 (23,24/08), Đợt 9 (30/09-01/10), Đợt 10 (28,29/10), Đợt 11 (29,30/11), Đợt 12 (27,28/12).",
+    "metadata": { "source": "FAQ", "category": "lich_thi" }
+  },
+  {
+    "question": "Kỳ thi đánh giá năng lực ngoại ngữ tháng 5 năm 2025 diễn ra ngày nào?",
+    "ground_truth": "Kỳ thi đánh giá năng lực ngoại ngữ tháng 5 năm 2025 diễn ra vào ngày 17/5/2025. Kỳ thi chứng chỉ ứng dụng CNTT tháng 5 diễn ra ngày 18/5/2025.",
+    "metadata": { "source": "TB_9354", "category": "lich_thi" }
+  },
+  {
+    "question": "Sinh viên bị trùng lịch học thì phải làm gì?",
+    "ground_truth": "Nếu học viên bị trùng lịch học, vui lòng đến trực tiếp văn phòng trung tâm để được hướng dẫn cụ thể.",
+    "metadata": { "source": "FAQ", "category": "ho_tro_hoc_vien" }
+  },
+  {
+    "question": "Sinh viên có chứng chỉ ngoại ngữ cấp ngoài trường thì làm thế nào để xác nhận?",
+    "ground_truth": "Nếu sinh viên đã có chứng chỉ tiếng Anh hoặc Tin học được cấp ở ngoài trường, vui lòng liên hệ cô Nhành tại phòng Đào tạo để được xác nhận.",
+    "metadata": { "source": "FAQ", "category": "ho_tro_hoc_vien" }
+  },
+  {
+    "question": "Chuẩn đầu ra ngoại ngữ của sinh viên đại học là bậc mấy?",
+    "ground_truth": "Sinh viên trình độ đại học hệ chính quy phải đạt tối thiểu bậc 3/6 theo Khung năng lực ngoại ngữ 6 bậc dùng cho Việt Nam (tương đương B1). Sinh viên trình độ cao đẳng phải đạt tối thiểu bậc 2/6.",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "Chứng chỉ ngoại ngữ nộp cho trường có bị giới hạn thời hạn không?",
+    "ground_truth": "Có. Các văn bằng/chứng chỉ ngoại ngữ khi nộp về Trường Đại học Đồng Tháp để xét miễn học phần hoặc công nhận đạt chuẩn đầu ra phải còn thời hạn, không quá 24 tháng kể từ ngày cấp. Riêng chứng chỉ ứng dụng CNTT cơ bản không bị giới hạn thời gian hiệu lực.",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "IELTS bao nhiêu điểm thì tương đương bậc 3 để xét chuẩn đầu ra?",
+    "ground_truth": "IELTS từ 4.0 đến 5.0 tương đương bậc 3/6 theo Khung năng lực ngoại ngữ 6 bậc dùng cho Việt Nam, đủ điều kiện xét chuẩn đầu ra cho sinh viên đại học hệ chính quy. IELTS 3.0-3.5 tương đương bậc 2 (chuẩn đầu ra cao đẳng).",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "TOEIC bao nhiêu điểm để đạt chuẩn đầu ra bậc 3?",
+    "ground_truth": "TOEIC 4 kỹ năng tương đương bậc 3: Nghe 275-399, Đọc 275-384, Nói 120-159, Viết 120-149. Tương đương bậc 2: Nghe 110-274, Đọc 115-274, Nói 90-119, Viết 70-119.",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "Tiếng Nhật JLPT mấy để đạt chuẩn đầu ra đại học?",
+    "ground_truth": "JLPT N4 tương đương bậc 3/6 Khung năng lực ngoại ngữ Việt Nam, đạt chuẩn đầu ra cho sinh viên đại học. JLPT N5 tương đương bậc 2 (chuẩn cao đẳng).",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "Tiếng Hàn TOPIK mấy để đạt chuẩn đầu ra đại học?",
+    "ground_truth": "TOPIK II Bậc 3 tương đương bậc 3/6 theo Khung năng lực ngoại ngữ Việt Nam, đạt chuẩn đầu ra đại học. TOPIK I Bậc 2 tương đương bậc 2 (chuẩn cao đẳng).",
+    "metadata": { "source": "QD_6116", "category": "chuan_dau_ra" }
+  },
+  {
+    "question": "Học phí lớp Lập trình Python cơ bản là bao nhiêu?",
+    "ground_truth": "Học phí lớp Lập trình Python cơ bản là 1.800.000đ/khóa (60 tiết), học trực tiếp 100%. Áp dụng từ ngày 11/8/2025.",
+    "metadata": { "source": "TB_210", "category": "hoc_phi" }
+  },
+  {
+    "question": "Học phí lớp Ứng dụng CNTT cơ bản là bao nhiêu?",
+    "ground_truth": "Học phí lớp Ứng dụng CNTT cơ bản là 1.680.000đ/khóa (75 tiết), học trực tiếp 100%. Lớp Ôn thi Ứng dụng CNTT cơ bản là 1.120.000đ (45 tiết).",
+    "metadata": { "source": "TB_210", "category": "hoc_phi" }
+  },
+  {
+    "question": "Học phí lớp IELTS 5.5-6.5 là bao nhiêu?",
+    "ground_truth": "Học phí lớp IELTS 5.5-6.5 là 1.200.000đ/tháng (8 buổi/tháng) học trực tiếp, hoặc 1.000.000đ/tháng học 70% trực tuyến + 30% trực tiếp, hoặc 900.000đ/tháng học 100% trực tuyến.",
+    "metadata": { "source": "TB_210", "category": "hoc_phi" }
+  },
+  {
+    "question": "Học phí lớp ôn thi VSTEP Bậc 3 (B1) cấp tốc là bao nhiêu?",
+    "ground_truth": "Học phí lớp Ôn thi VSTEP Bậc 3 (B1) cấp tốc là 2.120.000đ/khóa (60 tiết) học trực tiếp 100%, hoặc 1.700.000đ học 70% trực tuyến + 30% trực tiếp, hoặc 1.600.000đ học 100% trực tuyến.",
+    "metadata": { "source": "QD_5845", "category": "hoc_phi" }
+  },
+  {
+    "question": "Học phí lớp tiếng Hàn giao tiếp là bao nhiêu?",
+    "ground_truth": "Học phí lớp tiếng Hàn giao tiếp 1 và 2 là 4.000.000đ/khóa (120 tiết) học trực tiếp, hoặc 3.200.000đ học 70% trực tuyến + 30% trực tiếp, hoặc 3.000.000đ học 100% trực tuyến.",
+    "metadata": { "source": "TB_210", "category": "hoc_phi" }
+  },
+  {
+    "question": "Chính sách miễn giảm học phí dành cho ai?",
+    "ground_truth": "Chính sách miễn giảm học phí áp dụng cho các lớp tiếng Anh, tin học thiếu nhi, IELTS, VSTEP đối tượng THCS/THPT: giảm 20% cho con viên chức ngành giáo dục, giảm 30% cho con viên chức Trường ĐH Đồng Tháp, giảm 3% hoặc tặng áo khi đóng trước 3 tháng, miễn tháng thứ 7 hoặc tặng balo khi đóng trước 6 tháng. Sinh viên ĐH Đồng Tháp thuộc diện dân tộc thiểu số, con thương binh, hộ nghèo... được giảm 25% một lần duy nhất.",
+    "metadata": { "source": "TB_210", "category": "chinh_sach" }
+  },
+  {
+    "question": "Số tín chỉ của học phần Ngoại ngữ 1, 2, 3 là bao nhiêu?",
+    "ground_truth": "Ngoại ngữ 1 có 3 tín chỉ, Ngoại ngữ 2 có 3 tín chỉ, Ngoại ngữ 3 có 4 tín chỉ.",
+    "metadata": { "source": "FAQ", "category": "thong_tin_khoa_hoc" }
+  },
+  {
+    "question": "Hình thức thi chứng chỉ tin học UDCNTT cơ bản như thế nào?",
+    "ground_truth": "Thi UDCNTT cơ bản gồm 2 phần: Lý thuyết (trắc nghiệm trên máy vi tính, 50 câu, 60 phút) và Thực hành (trên máy vi tính, 90 phút, gồm 4 nội dung: kỹ năng cơ bản sử dụng máy tính, xử lý văn bản, bảng tính, trình chiếu cơ bản). Đạt khi cả hai phần đều đạt từ 5.0 điểm trở lên.",
+    "metadata": { "source": "QD_2770", "category": "quy_dinh_thi" }
+  },
+  {
+    "question": "Học viên Trung tâm được giảm bao nhiêu phần trăm phí thi CNTT?",
+    "ground_truth": "Học viên của Trung tâm Ngoại ngữ và Tin học khi đăng ký dự thi chứng chỉ ứng dụng CNTT được giảm 50% phí dự thi. Ngoài ra, kết quả thi được bảo lưu 01 lần trong 03 kỳ thi liên tiếp.",
+    "metadata": { "source": "QD_2770", "category": "quyen_loi" }
+  },
+  {
+    "question": "Học kỳ 3 năm học 2025-2026 bắt đầu và kết thúc khi nào?",
+    "ground_truth": "Học kỳ 3 năm học 2025-2026 tổ chức dạy học từ ngày 18/05/2026 đến ngày 16/08/2026. Đăng ký học phần lần 1 từ 11/4/2026 đến 17/5/2026.",
+    "metadata": { "source": "KH_HK3", "category": "ke_hoach_dao_tao" }
+  },
+  {
+    "question": "Sinh viên điểm danh bằng cách nào trong học kỳ 3?",
+    "ground_truth": "Sinh viên được điểm danh trong mỗi buổi học thông qua phần mềm OneUni, bằng cách quét mã QR hoặc nhập mã điểm danh do giảng viên cung cấp.",
+    "metadata": { "source": "KH_HK3", "category": "quy_dinh_hoc" }
+  },
+  {
+    "question": "Số tài khoản ngân hàng để nộp học phí và phí thi là bao nhiêu?",
+    "ground_truth": "Số tài khoản: 109000916169, tên tài khoản Trường Đại học Đồng Tháp, mở tại Ngân hàng TMCP Đại chúng Việt Nam - Chi nhánh Đồng Tháp (PVCOMBANK). Quầy giao dịch tại số 783 Phạm Hữu Lầu, Phường 6, TP. Cao Lãnh, tỉnh Đồng Tháp.",
+    "metadata": { "source": "QD_2770", "category": "thanh_toan" }
+  },
+  {
+    "question": "Chương trình Ngoại ngữ Tiếng Anh 1, 2, 3 mới áp dụng từ khóa nào?",
+    "ground_truth": "Chương trình ngoại ngữ Tiếng Anh (1, 2, 3) mới được ban hành theo Quyết định số 5884/QĐ-ĐHĐT tháng 9 năm 2025, áp dụng cho các ngành đào tạo trình độ cao đẳng và đại học hệ chính quy tuyển sinh từ khoá 2025 của Trường Đại học Đồng Tháp.",
+    "metadata": { "source": "QD_5884", "category": "chuong_trinh_dao_tao" }
   }
 ]
