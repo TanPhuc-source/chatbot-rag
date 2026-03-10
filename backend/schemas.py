@@ -8,11 +8,30 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    role: Optional[str] = None    
 
 class UserResponse(BaseModel):
     id: int
     username: str
     email: EmailStr
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
     role: str
     is_active: bool
     created_at: datetime
