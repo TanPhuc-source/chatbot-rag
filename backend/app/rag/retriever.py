@@ -1,5 +1,7 @@
 """
 Retriever — Hybrid Search: Vector + BM25
+
+Hỗ trợ HyDE: truyền vào embed_text để override query embedding.
 """
 from __future__ import annotations
 
@@ -27,12 +29,14 @@ async def vector_search(
     query: str,
     top_k: int | None = None,
     collection_name: str | None = None,
+    embed_text: str | None = None,  # HyDE: dùng text này để embed thay cho query
 ) -> list[RetrievedChunk]:
     settings = get_settings()
     k = top_k or settings.RETRIEVER_TOP_K
 
     embedder = get_embedding_provider()
-    query_embedding = embedder.embed_query(query)
+    # Nếu có embed_text (HyDE hypothetical doc), dùng nó; ngược lại dùng query gốc
+    query_embedding = embedder.embed_query(embed_text if embed_text else query)
 
     collection = _get_collection(collection_name)
 
@@ -70,11 +74,17 @@ async def hybrid_search(
     collection_name: str | None = None,
     vector_weight: float = 0.7,
     bm25_weight: float = 0.3,
+    embed_text: str | None = None,  # HyDE: hypothetical document text
 ) -> list[RetrievedChunk]:
     settings = get_settings()
     k = top_k or settings.RETRIEVER_TOP_K
 
-    vector_chunks = await vector_search(query, top_k=k * 2, collection_name=collection_name)
+    vector_chunks = await vector_search(
+        query,
+        top_k=k * 2,
+        collection_name=collection_name,
+        embed_text=embed_text,
+    )
 
     if not vector_chunks:
         return []
@@ -82,6 +92,7 @@ async def hybrid_search(
     corpus = [c.content for c in vector_chunks]
     tokenized_corpus = [doc.lower().split() for doc in corpus]
     bm25 = BM25Okapi(tokenized_corpus)
+    # BM25 luôn dùng query gốc (không dùng hypothetical text)
     bm25_scores = bm25.get_scores(query.lower().split())
 
     max_bm25 = max(bm25_scores) if max(bm25_scores) > 0 else 1.0

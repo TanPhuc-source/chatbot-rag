@@ -43,6 +43,18 @@ class Settings(BaseSettings):
     RETRIEVER_TOP_K: int = 10        # lấy nhiều trước khi rerank
     RERANKER_TOP_N: int = 4          # sau rerank còn lại bao nhiêu
 
+    # ── RAG Advanced Features ─────────────────────────────────
+    # HyDE: embed hypothetical answer thay vì embed query trực tiếp
+    ENABLE_HYDE: bool = True
+
+    # Query Transformations: sinh nhiều biến thể query, search song song
+    ENABLE_QUERY_TRANSFORM: bool = True
+    QUERY_TRANSFORM_N: int = 3       # số biến thể sinh ra
+
+    # Contextual Chunk Headers: thêm header ngữ cảnh khi index tài liệu
+    ENABLE_CONTEXTUAL_HEADERS: bool = True
+    CONTEXTUAL_HEADERS_MAX_CHUNKS: int = 200  # giới hạn chunk được enrich/file
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

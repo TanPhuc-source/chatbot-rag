@@ -5,10 +5,12 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.config import get_settings
 from app.ingestion.cleaner import clean_chunks
 from app.ingestion.indexer import index_chunks, delete_document
 from app.ingestion.json_loader import load_json_bytes
 from app.ingestion.loader import load_bytes
+from app.rag.contextual_headers import enrich_chunks_with_headers
 from app.utils.logger import logger
 
 # Định dạng được phép upload
@@ -52,6 +54,7 @@ async def handle_upload(
 
     document_id = str(uuid.uuid4())
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    settings = get_settings()
 
     try:
         logger.info(f"Processing upload: {filename} ({size_mb:.2f}MB) → doc_id={document_id}")
@@ -83,7 +86,16 @@ async def handle_upload(
                 error="Sau khi làm sạch, không còn nội dung hữu ích. File có thể chứa toàn header/footer hoặc ký tự rác.",
             )
 
-        # 4. Embed + index
+        # 4. [Contextual Headers] Thêm tiêu đề ngữ cảnh vào từng chunk trước khi embed
+        #    Bước này gọi LLM cho mỗi chunk → chỉ bật khi ENABLE_CONTEXTUAL_HEADERS=True
+        if settings.ENABLE_CONTEXTUAL_HEADERS:
+            logger.info(f"Enriching chunks with contextual headers for: {filename}")
+            chunks = await enrich_chunks_with_headers(
+                chunks,
+                max_chunks=settings.CONTEXTUAL_HEADERS_MAX_CHUNKS,
+            )
+
+        # 5. Embed + index
         total_indexed = await index_chunks(chunks, document_id=document_id)
 
         logger.info(f"✅ Upload success: {filename} → {total_indexed} chunks indexed")

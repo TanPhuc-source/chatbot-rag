@@ -38,13 +38,12 @@ MIN_ALPHANUMERIC_RATIO = 0.40
 MIN_MEANINGFUL_WORDS = 5
 
 # Pattern header/footer phổ biến trong tài liệu học thuật tiếng Việt
+# LƯU Ý: chỉ match dòng ĐƠN độc lập (ngắn, không có nội dung thực)
+# KHÔNG dùng pattern quá rộng như ".*Trường Đại học.*" vì sẽ xóa nhầm nội dung
 _HEADER_FOOTER_PATTERNS = [
     # Số trang đơn lẻ: "1", "- 2 -", "Trang 3"
     r"^\s*[-–—]?\s*[Tt]rang\s+\d+\s*[-–—]?\s*$",
     r"^\s*\d{1,3}\s*$",
-    # Header trường đại học
-    r"^.*[Tt]rường\s+[Đđ]ại\s+[Hh]ọc.*$",
-    r"^.*[Tt]rung\s+[Tt]âm\s+[Nn]goại\s+[Nn]gữ.*$",
     # Dấu phân cách trang
     r"^[\s\-_=*\.]{3,}$",
     # "Tiếp theo", "(Continued)"
