@@ -1,8 +1,3 @@
-"""
-Upload Handler — nhận file bytes từ API, chạy toàn bộ pipeline:
-
-  File bytes → Kreuzberg extract+chunk → Embed → ChromaDB index
-"""
 from __future__ import annotations
 
 import mimetypes
@@ -10,6 +5,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from app.ingestion.cleaner import clean_chunks
 from app.ingestion.indexer import index_chunks, delete_document
 from app.ingestion.json_loader import load_json_bytes
 from app.ingestion.loader import load_bytes
@@ -33,15 +29,6 @@ async def handle_upload(
     file_bytes: bytes,
     filename: str,
 ) -> UploadResult:
-    """
-    Xử lý 1 file upload:
-    1. Validate định dạng + kích thước
-    2. Kreuzberg extract + chunk
-    3. Embed + index vào ChromaDB
-    4. Trả về kết quả
-
-    document_id là UUID duy nhất — dùng để xoá sau này.
-    """
     # 1. Validate
     suffix = Path(filename).suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
@@ -84,7 +71,19 @@ async def handle_upload(
                 error="Không trích xuất được nội dung từ file. File có thể bị lỗi hoặc chỉ chứa ảnh scan.",
             )
 
-        # 3. Embed + index
+        # 3. Làm sạch dữ liệu: xóa rác, chuẩn hóa whitespace, lọc chunk vô nghĩa
+        chunks = clean_chunks(chunks)
+
+        if not chunks:
+            return UploadResult(
+                document_id=document_id,
+                filename=filename,
+                chunks_indexed=0,
+                status="failed",
+                error="Sau khi làm sạch, không còn nội dung hữu ích. File có thể chứa toàn header/footer hoặc ký tự rác.",
+            )
+
+        # 4. Embed + index
         total_indexed = await index_chunks(chunks, document_id=document_id)
 
         logger.info(f"✅ Upload success: {filename} → {total_indexed} chunks indexed")

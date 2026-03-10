@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 # Load biến môi trường từ file .env
 load_dotenv()
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL").replace(
+    "postgresql+asyncpg://", "postgresql://"
+)
 
 # Kết nối PostgreSQL
 engine = sqlalchemy.create_engine(SQLALCHEMY_DATABASE_URL)

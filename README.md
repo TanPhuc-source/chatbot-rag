@@ -22,3 +22,16 @@ src/
 ├── lib/        # axios instance, auth helpers
 └── types/      # TypeScript interfaces
 ```
+
+cd đường-dẫn-đến/backend
+
+# Tạo virtual environment
+python -m venv venv
+
+# Kích hoạt venv
+venv\Scripts\activate
+
+# Cài dependencies
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload --port 8000
