@@ -38,7 +38,7 @@ export default function LoginPage() {
                 if (username) urlEncodedData.append('username', username)
                 if (password) urlEncodedData.append('password', password)
 
-                const response = await axios.post('http://127.0.0.1:8000/login', urlEncodedData, {
+                const response = await axios.post('http://127.0.0.1:8000/auth/login', urlEncodedData, {
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 })
 
@@ -76,7 +76,7 @@ export default function LoginPage() {
                 if (phone) payload.phone = phone;
                 if (address) payload.address = address;
 
-                await axios.post('http://127.0.0.1:8000/register', payload)
+                await axios.post('http://127.0.0.1:8000/auth/register', payload)
 
                 setStatus({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' })
 

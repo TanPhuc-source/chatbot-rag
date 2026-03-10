@@ -1,24 +1,25 @@
-# backend/database.py
+"""
+Database connection — dùng cho toàn bộ app (sync, SQLAlchemy).
+"""
+from __future__ import annotations
+
 import os
+
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
-# Load biến môi trường từ file .env
 load_dotenv()
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL").replace(
-    "postgresql+asyncpg://", "postgresql://"
-)
+# Tự convert asyncpg → sync nếu .env chỉ có 1 URL
+_raw_url = os.getenv("DATABASE_URL", "")
+SQLALCHEMY_DATABASE_URL = _raw_url.replace("postgresql+asyncpg://", "postgresql://")
 
-# Kết nối PostgreSQL
 engine = sqlalchemy.create_engine(SQLALCHEMY_DATABASE_URL)
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
-# Dependency để sử dụng trong FastAPI
+
 def get_db():
     db = SessionLocal()
     try:
