@@ -14,7 +14,12 @@ class User(Base):
     role = Column(String, default="user") # 'user' hoặc 'admin'
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
+    full_name = Column(String, nullable=True)
+    gender = Column(String, nullable=True)
+    date_of_birth = Column(String, nullable=True) # Hoặc dùng kiểu Date
+    phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+
     # Relationships (Giúp truy vấn user.documents hoặc user.chat_sessions dễ dàng)
     documents = relationship("Document", back_populates="owner")
     chat_sessions = relationship("ChatSession", back_populates="owner")

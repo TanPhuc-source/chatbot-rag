@@ -18,6 +18,7 @@ import asyncio
 from kreuzberg import extract_file
 load_dotenv()
 
+models.Base.metadata.create_all(bind=engine) # Tạo bảng nếu chưa tồn tại
 # --- KHỞI TẠO TÀI NGUYÊN ---
 app = FastAPI(title="Chatbot RAG API", description="API cho hệ thống Chatbot RAG")
 
@@ -104,19 +105,36 @@ def get_admin_user(current_user: models.User = Depends(get_current_user)):
 def read_root():
     return {"message": "Server đang chạy ngon lành! 🚀"}
 
+# backend/main.py
+
 @app.post("/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # 1. Kiểm tra trùng Username
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Tên đăng nhập đã được sử dụng")
     
+    # 2. Kiểm tra trùng Email
+    db_email = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_email:
+        raise HTTPException(status_code=400, detail="Email này đã được đăng ký")
+    
+    # 3. Mã hóa mật khẩu
     hashed_password = get_password_hash(user.password)
+    
+    # 4. Lưu User mới với ĐẦY ĐỦ các trường
     new_user = models.User(
         username=user.username,
         email=user.email,
         hashed_password=hashed_password,
-        role="user" # Mặc định là user thường
+        role="user", # Mặc định là user thường
+        full_name=user.full_name,
+        gender=user.gender,
+        date_of_birth=user.date_of_birth,
+        phone=user.phone,
+        address=user.address
     )
+    
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -157,6 +175,34 @@ def get_all_users(
 ):
     users = db.query(models.User).order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
     return users
+
+@app.patch("/admin/users/{user_id}", response_model=schemas.UserResponse)
+def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Cập nhật toàn bộ thông tin user (full_name, gender, email, role...)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy user")
+
+    # Kiểm tra email unique nếu thay đổi
+    if user_update.email and user_update.email != user.email:
+        if db.query(models.User).filter(
+            models.User.email == user_update.email,
+            models.User.id != user_id
+        ).first():
+            raise HTTPException(status_code=400, detail="Email đã được sử dụng")
+
+    update_data = user_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 @app.post("/upload")
 def upload_document(
