@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-# from app.core.dependencies import get_current_user
+#from app.core.dependencies import get_current_user
 from app.services.chat_service import chat, stream_chat
 from app.utils.logger import logger
 
@@ -46,7 +46,7 @@ class ChatResponse(BaseModel):
 @router.post("", response_model=ChatResponse)
 async def chat_endpoint(
     body: ChatRequest,
-    # user_id: str = Depends(get_current_user),
+    #user_id: str = Depends(get_current_user),
 ):
     """
     Hỏi đáp thông thường — trả về response đầy đủ 1 lần.
@@ -66,7 +66,7 @@ async def chat_endpoint(
 @router.post("/stream")
 async def stream_endpoint(
     body: ChatRequest,
-    # user_id: str = Depends(get_current_user),
+    #user_id: str = Depends(get_current_user),
 ):
     """
     Streaming chat — trả về Server-Sent Events.

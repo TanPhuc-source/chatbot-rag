@@ -1,7 +1,12 @@
 """
 RAG Pipeline — kết nối toàn bộ luồng:
 
-  Query → Hybrid Search → Rerank → Prompt → LLM → Response
+  Query → [HyDE] → [Query Transform] → Hybrid Search → Rerank → Prompt → LLM → Response
+
+Các kỹ thuật nâng cao (bật/tắt qua .env):
+  - HyDE: embed hypothetical answer thay cho query gốc → vector search chính xác hơn
+  - Query Transform: sinh nhiều biến thể query → search song song → merge chunks
+  - Contextual Headers: áp dụng lúc ingestion (xem upload_handler.py)
 """
 from __future__ import annotations
 
@@ -10,6 +15,7 @@ from typing import AsyncIterator
 
 from app.config import get_settings
 from app.rag.embeddings import get_embedding_provider
+from app.rag.hyde import generate_hypothetical_document
 from app.rag.llm_provider import get_llm_provider
 from app.rag.prompts import (
     build_qa_prompt,
@@ -17,6 +23,7 @@ from app.rag.prompts import (
     build_summarize_prompt,
     build_out_of_scope_response,
 )
+from app.rag.query_transform import multi_query_search
 from app.rag.reranker import rerank
 from app.rag.retriever import RetrievedChunk, hybrid_search
 from app.utils.logger import logger
@@ -64,25 +71,85 @@ async def _retrieve_and_rerank(
     query: str,
     collection_name: str | None = None,
 ) -> list[RetrievedChunk]:
-    """Bước 1+2: Retrieve → Rerank."""
+    """
+    Bước 1+2: Retrieve → Rerank.
+
+    Áp dụng theo thứ tự ưu tiên:
+      1. Nếu ENABLE_QUERY_TRANSFORM=True → multi_query_search (bao gồm HyDE nếu bật)
+      2. Nếu chỉ ENABLE_HYDE=True → hybrid_search với hypothetical embed_text
+      3. Fallback: hybrid_search thông thường
+    """
     settings = get_settings()
 
-    # Hybrid search
-    chunks = await hybrid_search(query, collection_name=collection_name)
+    # ── Bước 1: Retrieve ──────────────────────────────────────────────────
+    if settings.ENABLE_QUERY_TRANSFORM:
+        # Query Transform tự gọi hybrid_search nhiều lần → nó handle HyDE nội bộ
+        # Ta inject HyDE vào từng variant search bên trong multi_query_search
+        # bằng cách patch embed_text nếu HyDE bật
+        logger.debug("Using Query Transform retrieval")
+        chunks = await _multi_query_with_hyde(query, collection_name)
+
+    elif settings.ENABLE_HYDE:
+        logger.debug("Using HyDE retrieval")
+        hypothetical = await generate_hypothetical_document(query)
+        chunks = await hybrid_search(
+            query,
+            collection_name=collection_name,
+            embed_text=hypothetical,
+        )
+
+    else:
+        logger.debug("Using standard hybrid search")
+        chunks = await hybrid_search(query, collection_name=collection_name)
 
     if not chunks:
         return []
 
-    # Lọc chunks quá kém
+    # ── Bước 2: Lọc score thấp ────────────────────────────────────────────
     chunks = [c for c in chunks if c.score >= RELEVANCE_THRESHOLD]
 
     if not chunks:
         logger.info(f"Không có chunk đủ liên quan cho query: '{query[:60]}'")
         return []
 
-    # Rerank
+    # ── Bước 3: Rerank ────────────────────────────────────────────────────
     reranked = await rerank(query, chunks, top_n=settings.RERANKER_TOP_N)
     return reranked
+
+
+async def _multi_query_with_hyde(
+    query: str,
+    collection_name: str | None = None,
+) -> list[RetrievedChunk]:
+    """
+    Query Transform + HyDE kết hợp:
+    - Sinh N biến thể query
+    - Nếu HyDE bật: generate hypothetical doc cho query GỐC, dùng làm 1 search nữa
+    - Merge tất cả kết quả
+    """
+    import asyncio
+    from app.rag.query_transform import generate_query_variants, _merge_and_deduplicate
+
+    settings = get_settings()
+    tasks = []
+
+    # Search với các query variants
+    variants = await generate_query_variants(query, n=settings.QUERY_TRANSFORM_N)
+    for v in variants:
+        tasks.append(hybrid_search(v, collection_name=collection_name))
+
+    # Nếu HyDE bật, thêm 1 search nữa với hypothetical embed
+    if settings.ENABLE_HYDE:
+        hypothetical = await generate_hypothetical_document(query)
+        tasks.append(
+            hybrid_search(query, collection_name=collection_name, embed_text=hypothetical)
+        )
+        logger.debug(f"HyDE + {len(variants)} query variants → {len(tasks)} searches")
+    else:
+        logger.debug(f"{len(variants)} query variants → {len(tasks)} searches")
+
+    all_results = await asyncio.gather(*tasks)
+    return _merge_and_deduplicate(list(all_results), top_k=settings.RETRIEVER_TOP_K)
 
 
 async def answer(
