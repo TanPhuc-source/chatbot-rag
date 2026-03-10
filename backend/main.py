@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -19,6 +20,14 @@ load_dotenv()
 
 # --- KHỞI TẠO TÀI NGUYÊN ---
 app = FastAPI(title="Chatbot RAG API", description="API cho hệ thống Chatbot RAG")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cho phép tất cả domain (có thể chỉnh lại cho an toàn hơn)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Tạo thư mục lưu file upload
 UPLOAD_DIR = "data/uploads"
@@ -128,7 +137,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
 
 # --- API CHO ADMIN DASHBOARD ---
 @app.get("/admin/documents", response_model=list[schemas.DocumentResponse])
@@ -148,29 +157,6 @@ def get_all_users(
 ):
     users = db.query(models.User).order_by(models.User.created_at.desc()).offset(skip).limit(limit).all()
     return users
-
-
-# --- XỬ LÝ UPLOAD VÀ BACKGROUND TASK ---
-def process_extracted_document(document_id: int, file_path: str):
-    db = SessionLocal()
-    try:
-        doc = db.query(models.Document).filter(models.Document.id == document_id).first()
-        if not doc:
-            return
-            
-        doc.status = "processing"
-        db.commit()
-
-        # TODO: Code bóc tách Text và Embedding của NGƯỜI SỐ 1 sẽ nằm ở đây
-        
-        doc.status = "indexed"
-        db.commit()
-    except Exception as e:
-        print(f"Lỗi xử lý file {document_id}: {e}")
-        doc.status = "error"
-        db.commit()
-    finally:
-        db.close()
 
 @app.post("/upload")
 def upload_document(
@@ -234,3 +220,141 @@ def process_extracted_document(document_id: int, file_path: str):
         db.commit()
     finally:
         db.close()
+
+# ==========================================
+#         API LỊCH SỬ HỘI THOẠI (CHAT)
+# ==========================================
+
+@app.post("/chat/sessions", response_model=schemas.ChatSessionResponse)
+def create_chat_session(
+    session_in: schemas.ChatSessionCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Tạo một phiên chat mới"""
+    new_session = models.ChatSession(
+        title=session_in.title,
+        user_id=current_user.id
+    )
+    db.add(new_session)
+    db.commit()
+    db.refresh(new_session)
+    return new_session
+
+@app.get("/chat/sessions", response_model=list[schemas.ChatSessionResponse])
+def get_chat_sessions(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Lấy danh sách các phiên chat của user hiện tại"""
+    sessions = db.query(models.ChatSession)\
+                 .filter(models.ChatSession.user_id == current_user.id)\
+                 .order_by(models.ChatSession.created_at.desc())\
+                 .all()
+    return sessions
+
+@app.get("/chat/sessions/{session_id}/messages", response_model=list[schemas.MessageResponse])
+def get_chat_messages(
+    session_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Lấy toàn bộ tin nhắn của một phiên chat cụ thể"""
+    # Kiểm tra xem session này có thuộc về user hiện tại không
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên chat")
+        
+    messages = db.query(models.ChatMessage)\
+                 .filter(models.ChatMessage.session_id == session_id)\
+                 .order_by(models.ChatMessage.created_at.asc())\
+                 .all()
+    return messages
+
+@app.delete("/chat/sessions/{session_id}")
+def delete_chat_session(
+    session_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Xóa một phiên chat và toàn bộ tin nhắn bên trong"""
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên chat")
+        
+    db.delete(session)
+    db.commit()
+    return {"message": "Đã xóa phiên chat thành công"}
+
+@app.delete("/admin/documents/{document_id}")
+def delete_document(
+    document_id: int,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Xóa tài liệu khỏi hệ thống"""
+    doc = db.query(models.Document).filter(models.Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+    
+    # Xóa file vật lý trên ổ cứng (nếu tồn tại)
+    if os.path.exists(doc.file_path):
+        os.remove(doc.file_path)
+        
+    # Xóa record trong database
+    db.delete(doc)
+    db.commit()
+    
+    # TODO: Cần có cơ chế hoặc API để báo cho Người 1 xóa Embedding trong ChromaDB
+    
+    return {"message": f"Đã xóa tài liệu {doc.filename} thành công"}
+
+@app.patch("/admin/users/{user_id}/role")
+def update_user_role(
+    user_id: int,
+    role_update: schemas.UserRoleUpdate,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Cập nhật quyền hạn của user (Cấp quyền Admin)"""
+    if role_update.role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Role không hợp lệ. Chỉ chấp nhận 'user' hoặc 'admin'")
+        
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy user")
+        
+    user.role = role_update.role
+    db.commit()
+    return {"message": f"Đã cập nhật quyền của {user.username} thành {user.role}"}
+
+    # Mở file backend/main.py, kéo xuống phần API dành cho Admin và dán đoạn này vào
+
+@app.patch("/admin/users/{user_id}/toggle-status")
+def toggle_user_status(
+    user_id: int,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Khóa / Mở khóa tài khoản (Chỉ Admin)"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản này")
+    
+    # Không cho phép admin tự khóa tài khoản của chính mình
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Bạn không thể tự khóa tài khoản của mình!")
+        
+    user.is_active = not user.is_active # Đảo ngược trạng thái
+    db.commit()
+    
+    action = "Mở khóa" if user.is_active else "Khóa"
+    return {"message": f"Đã {action} tài khoản {user.username} thành công!"}
