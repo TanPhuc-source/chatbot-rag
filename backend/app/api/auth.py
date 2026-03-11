@@ -18,6 +18,11 @@ from typing import Optional
 from app.db.database import get_db
 from app.db import models
 from app.config import get_settings
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+from app.api import schemas
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 router = APIRouter()
 
@@ -112,6 +117,7 @@ def login(
         models.User.username == form_data.username
     ).first()
 
+    # 1. Kiểm tra tài khoản và mật khẩu
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -119,5 +125,113 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # 2. THÊM MỚI: Kiểm tra tài khoản có bị khóa không
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên."
+        )
+
+    # 3. Tạo và trả về token nếu hợp lệ
     token = create_access_token({"sub": user.username})
     return {"access_token": token, "token_type": "bearer", "role": user.role}
+
+# Cấu hình Bearer token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Không thể xác thực thông tin đăng nhập",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        settings = get_settings()
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+        
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# 1. API LẤY THÔNG TIN CÁ NHÂN
+@router.get("/me", response_model=UserResponse)
+def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
+# 2. API CẬP NHẬT THÔNG TIN CÁ NHÂN
+@router.patch("/me", response_model=UserResponse)
+def update_user_me(
+    user_update: schemas.UserUpdate, 
+    current_user: models.User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    # Cập nhật các trường có gửi lên (không gửi thì giữ nguyên)
+    update_data = user_update.model_dump(exclude_unset=True)
+    
+    # Không cho phép tự đổi quyền (role) ở endpoint này
+    if "role" in update_data:
+        del update_data["role"]
+        
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.patch("/me", response_model=UserResponse)
+def update_user_me(
+    user_update: schemas.UserUpdate, 
+    current_user: models.User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    update_data = user_update.model_dump(exclude_unset=True)
+    
+    if "role" in update_data:
+        del update_data["role"]
+        
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+from fastapi import UploadFile, File
+import os
+import shutil
+from pathlib import Path
+
+UPLOAD_DIR = Path("uploads/avatars")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@router.post("/me/avatar")
+def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(400, detail="Chỉ chấp nhận file ảnh")
+
+    # Tạo tên file duy nhất
+    file_ext = file.filename.split(".")[-1].lower()
+    filename = f"user_{current_user.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{file_ext}"
+    file_path = UPLOAD_DIR / filename
+
+    # Lưu file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Cập nhật đường dẫn vào DB
+    current_user.avatar_url = f"/uploads/avatars/{filename}"
+    db.commit()
+    db.refresh(current_user)
+
+    return {"message": "Avatar đã được cập nhật", "avatar_url": current_user.avatar_url}

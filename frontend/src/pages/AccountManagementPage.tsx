@@ -150,6 +150,7 @@ export default function AccountManagementPage() {
                     username: formData.get('username') as string,
                     email: formData.get('email') as string,
                     password: formData.get('password') as string,
+                    role: formData.get('role') as string | 'user',
                 };
                 // thêm các trường optional
                 ['full_name', 'gender', 'date_of_birth', 'phone', 'address'].forEach(field => {
@@ -157,7 +158,7 @@ export default function AccountManagementPage() {
                     if (val) createPayload[field] = val;
                 });
 
-                await api.post('/register', createPayload);
+                await api.post('/admin/users', createPayload);
                 alert("✅ Tạo tài khoản thành công!");
             }
 
@@ -200,7 +201,7 @@ export default function AccountManagementPage() {
             <Sidebar
                 isMobileOpen={isMobileMenuOpen}
                 setIsMobileOpen={setIsMobileMenuOpen}
-                user={{ fullName: 'Quản trị viên', email: 'admin@dthu.edu.vn', role: 'admin' }}
+            //user={{ fullName: 'Quản trị viên', email: 'admin@dthu.edu.vn', role: 'admin' }}
             />
 
             {/* MAIN LAYOUT */}
@@ -369,181 +370,203 @@ export default function AccountManagementPage() {
                         )}
                     </AnimatePresence>
 
-                    {/* --- MODAL 2: UPSERT USER (ĐÃ CẬP NHẬT: 2 CỘT + AVATAR) --- */}
+                    {/* --- MODAL 2: UPSERT USER (CHỈ FORM, TO RỘNG, CHIA KHU VỰC) --- */}
                     <AnimatePresence>
                         {isUpsertModalOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl"
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl my-8 relative flex flex-col max-h-[90vh]"
                                 >
-                                    <form onSubmit={handleUpsertSubmit}>
-                                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center rounded-t-2xl">
-                                            <h3 className="font-bold text-lg text-slate-800">
-                                                {editingUser ? 'Cập nhật thông tin tài khoản' : 'Tạo tài khoản mới'}
-                                            </h3>
+                                    <form onSubmit={handleUpsertSubmit} className="flex flex-col h-full overflow-hidden">
+                                        {/* HEADER */}
+                                        <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center shrink-0">
+                                            <div>
+                                                <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                                                    {editingUser ? <Edit className="text-amber-500" size={24} /> : <Plus className="text-blue-600" size={24} />}
+                                                    {editingUser ? 'Cập nhật thông tin tài khoản' : 'Tạo tài khoản mới'}
+                                                </h3>
+                                                <p className="text-sm text-slate-500 mt-1">
+                                                    {editingUser ? 'Chỉnh sửa các thông tin cần thiết bên dưới.' : 'Điền đầy đủ thông tin để cấp quyền truy cập cho người dùng mới.'}
+                                                </p>
+                                            </div>
                                             <button
                                                 type="button"
                                                 onClick={() => { setIsUpsertModalOpen(false); setEditingUser(null); }}
-                                                className="text-slate-400 hover:text-slate-600"
+                                                className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-200 p-2 rounded-xl transition-colors border border-slate-200 shadow-sm"
                                             >
                                                 <X size={20} />
                                             </button>
                                         </div>
 
-                                        <div className="p-8 flex flex-col lg:flex-row gap-10">
-                                            {/* CỘT 1: AVATAR (Preview tự động từ tên) */}
-                                            <div className="flex-shrink-0 flex flex-col items-center lg:w-56">
-                                                <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Ảnh đại diện</div>
+                                        {/* BODY FORM (Cuộn được nếu màn hình nhỏ) */}
+                                        <div className="p-8 overflow-y-auto flex-1 bg-white">
 
-                                                <div className="w-40 h-40 rounded-3xl overflow-hidden border-8 border-white shadow-2xl bg-white">
-                                                    <img
-                                                        src={`https://ui-avatars.com/api/?name=${editingUser
-                                                            ? (editingUser.full_name || editingUser.username)
-                                                            : 'New User'
-                                                            }&background=0D8ABC&color=fff&size=256`}
-                                                        alt="Avatar Preview"
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                            {/* --- PHẦN 1: THÔNG TIN HỆ THỐNG --- */}
+                                            <div className="mb-8">
+                                                <h4 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                                                    <Shield size={16} /> Thông tin truy cập hệ thống
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">TÊN ĐĂNG NHẬP <span className="text-rose-500">*</span></label>
+                                                        <div className="relative">
+                                                            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                            <input
+                                                                name="username"
+                                                                defaultValue={editingUser?.username}
+                                                                required
+                                                                disabled={!!editingUser}
+                                                                placeholder="ví dụ: admin01"
+                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">ĐỊA CHỈ EMAIL <span className="text-rose-500">*</span></label>
+                                                        <div className="relative">
+                                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                            <input
+                                                                name="email"
+                                                                type="email"
+                                                                defaultValue={editingUser?.email}
+                                                                required
+                                                                placeholder="email@domain.com"
+                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {!editingUser && (
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-slate-600 mb-2">MẬT KHẨU <span className="text-rose-500">*</span></label>
+                                                            <div className="relative">
+                                                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                                <input
+                                                                    name="password"
+                                                                    type="password"
+                                                                    required
+                                                                    minLength={6}
+                                                                    placeholder="Tối thiểu 6 ký tự"
+                                                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">VAI TRÒ (QUYỀN) <span className="text-rose-500">*</span></label>
+                                                        <select
+                                                            name="role"
+                                                            defaultValue={editingUser?.role || 'user'}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer transition-all"
+                                                        >
+                                                            <option value="admin">Admin (Quản trị viên)</option>
+                                                            <option value="user">User (Người dùng cơ bản)</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
-
-                                                <p className="mt-6 text-center text-xs text-slate-400 leading-tight">
-                                                    Avatar được tạo tự động<br />
-                                                    từ Họ và tên (hoặc username)
-                                                </p>
                                             </div>
 
-                                            {/* CỘT 2: FORM FIELDS (chia 2 cột) */}
-                                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                                                {/* Tên đăng nhập */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Tên đăng nhập</label>
-                                                    <input
-                                                        name="username"
-                                                        defaultValue={editingUser?.username}
-                                                        required
-                                                        disabled={!!editingUser}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm disabled:bg-slate-100"
-                                                    />
-                                                </div>
-
-                                                {/* Email */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Email</label>
-                                                    <input
-                                                        name="email"
-                                                        type="email"
-                                                        defaultValue={editingUser?.email}
-                                                        required
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                    />
-                                                </div>
-
-                                                {/* Mật khẩu (chỉ khi tạo mới) */}
-                                                {!editingUser && (
+                                            {/* --- PHẦN 2: THÔNG TIN CÁ NHÂN --- */}
+                                            <div>
+                                                <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                                                    <User size={16} /> Thông tin cá nhân liên hệ
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     <div className="md:col-span-2">
-                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Mật khẩu</label>
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">HỌ VÀ TÊN</label>
                                                         <input
-                                                            name="password"
-                                                            type="password"
-                                                            required
-                                                            minLength={6}
-                                                            className="w-full px-3 py-2 border rounded-lg text-sm"
+                                                            name="full_name"
+                                                            defaultValue={editingUser?.full_name || ''}
+                                                            placeholder="Nhập đầy đủ họ và tên"
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
                                                         />
                                                     </div>
-                                                )}
 
-                                                {/* Họ và tên */}
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Họ và tên</label>
-                                                    <input
-                                                        name="full_name"
-                                                        defaultValue={editingUser?.full_name || ''}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                        placeholder="Nguyễn Văn A"
-                                                    />
-                                                </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">SỐ ĐIỆN THOẠI</label>
+                                                        <div className="relative">
+                                                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                            <input
+                                                                name="phone"
+                                                                defaultValue={editingUser?.phone || ''}
+                                                                placeholder="09xx xxx xxx"
+                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
 
-                                                {/* Giới tính */}
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Giới tính</label>
-                                                    <select
-                                                        name="gender"
-                                                        defaultValue={editingUser?.gender || ''}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                                                    >
-                                                        <option value="">Chưa chọn</option>
-                                                        <option value="Nam">Nam</option>
-                                                        <option value="Nữ">Nữ</option>
-                                                        <option value="Khác">Khác</option>
-                                                    </select>
-                                                </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-slate-600 mb-2">GIỚI TÍNH</label>
+                                                            <select
+                                                                name="gender"
+                                                                defaultValue={editingUser?.gender || ''}
+                                                                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer"
+                                                            >
+                                                                <option value="">Chưa chọn</option>
+                                                                <option value="Nam">Nam</option>
+                                                                <option value="Nữ">Nữ</option>
+                                                                <option value="Khác">Khác</option>
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-bold text-slate-600 mb-2">NGÀY SINH</label>
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="date"
+                                                                    name="date_of_birth"
+                                                                    defaultValue={editingUser?.date_of_birth || ''}
+                                                                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
 
-                                                {/* Ngày sinh */}
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Ngày sinh</label>
-                                                    <input
-                                                        type="date"
-                                                        name="date_of_birth"
-                                                        defaultValue={editingUser?.date_of_birth || ''}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                    />
-                                                </div>
-
-                                                {/* Số điện thoại */}
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Số điện thoại</label>
-                                                    <input
-                                                        name="phone"
-                                                        defaultValue={editingUser?.phone || ''}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                        placeholder="0123456789"
-                                                    />
-                                                </div>
-
-                                                {/* Địa chỉ (chiếm 2 cột) */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Địa chỉ</label>
-                                                    <textarea
-                                                        name="address"
-                                                        defaultValue={editingUser?.address || ''}
-                                                        rows={2}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm"
-                                                        placeholder="Số 1, Đường ABC, TP. Cao Lãnh"
-                                                    />
-                                                </div>
-
-                                                {/* Vai trò */}
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Vai trò hệ thống</label>
-                                                    <select
-                                                        name="role"
-                                                        defaultValue={editingUser?.role || 'user'}
-                                                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
-                                                    >
-                                                        <option value="admin">Admin (Quản trị viên)</option>
-                                                        <option value="user">User (Người dùng)</option>
-                                                    </select>
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-xs font-bold text-slate-600 mb-2">ĐỊA CHỈ LIÊN HỆ</label>
+                                                        <div className="relative">
+                                                            <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
+                                                            <textarea
+                                                                name="address"
+                                                                defaultValue={editingUser?.address || ''}
+                                                                rows={3}
+                                                                placeholder="Nhập địa chỉ chi tiết (Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố)"
+                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none resize-none transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
                                         </div>
 
-                                        <div className="bg-slate-50 px-6 py-4 border-t flex justify-end gap-3 rounded-b-2xl">
+                                        {/* FOOTER */}
+                                        <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
                                             <button
                                                 type="button"
                                                 onClick={() => { setIsUpsertModalOpen(false); setEditingUser(null); }}
-                                                className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded-lg"
+                                                className="px-6 py-2.5 text-sm font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors"
                                             >
                                                 Hủy bỏ
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-70"
+                                                className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-70 shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center gap-2"
                                             >
-                                                {isSubmitting ? 'Đang xử lý...' : (editingUser ? 'Lưu thay đổi' : 'Tạo mới')}
+                                                {isSubmitting ? (
+                                                    <span className="flex items-center gap-2">
+                                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang xử lý...
+                                                    </span>
+                                                ) : (
+                                                    editingUser ? 'Lưu thay đổi' : 'Hoàn tất tạo mới'
+                                                )}
                                             </button>
                                         </div>
                                     </form>

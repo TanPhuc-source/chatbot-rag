@@ -23,6 +23,7 @@ class User(Base):
     date_of_birth = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     address = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
 
     documents = relationship("Document", back_populates="owner")
     chat_sessions = relationship("ChatSession", back_populates="owner")
