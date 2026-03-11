@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom'; // Đổi từ next/navigation sang react-router-dom
+import { useNavigate, useOutletContext } from 'react-router-dom'; // Đổi từ next/navigation sang react-router-dom
 import {
     Upload, FileText, FileSpreadsheet, File as FileIcon, Image as ImageIcon,
     Trash2, CheckCircle, RefreshCw, AlertCircle, Database,
@@ -9,7 +9,7 @@ import {
     XCircle, ArrowLeft, Share2, Download, Info, HardDrive, Calendar, ZoomIn, ZoomOut, RotateCw, RefreshCcw,
     Bot, Square, CheckSquare
 } from 'lucide-react';
-import SidebarPage from './SidebarPage';
+//import SidebarPage from './SidebarPage';
 
 // Dùng React.lazy thay cho next/dynamic
 //const PdfViewer = React.lazy(() => import('./PdfViewer'));
@@ -58,7 +58,11 @@ export default function AdminDashboard() {
     const [documents, setDocuments] = useState<DocumentItem[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    //const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
+        isMobileMenuOpen: boolean;
+        setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
+    }>();
 
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
@@ -363,31 +367,31 @@ export default function AdminDashboard() {
     if (!token) return null; // Tránh render nháy trước khi redirect
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-700 overflow-hidden relative">
-            {/* --- TOASTS --- */}
-            <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none">
-                <AnimatePresence>
-                    {toasts.map(toast => (
-                        <motion.div
-                            key={toast.id}
-                            initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-                            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[300px] backdrop-blur-md ${toast.type === 'success' ? 'bg-white/90 border-green-200 text-green-700' : toast.type === 'error' ? 'bg-white/90 border-red-200 text-red-700' : 'bg-white/90 border-blue-200 text-blue-700'}`}
-                        >
-                            {toast.type === 'success' ? <CheckCircle size={20} /> : toast.type === 'error' ? <XCircle size={20} /> : <AlertCircle size={20} />}
-                            <span className="text-sm font-medium">{toast.message}</span>
-                            <button onClick={() => removeToast(toast.id)} className="ml-auto opacity-50 hover:opacity-100"><X size={16} /></button>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+        // <div className="flex h-screen bg-slate-50 font-sans text-slate-700 overflow-hidden relative">
+        //     {/* --- TOASTS --- */}
+        //     <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none">
+        //         <AnimatePresence>
+        //             {toasts.map(toast => (
+        //                 <motion.div
+        //                     key={toast.id}
+        //                     initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+        //                     className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[300px] backdrop-blur-md ${toast.type === 'success' ? 'bg-white/90 border-green-200 text-green-700' : toast.type === 'error' ? 'bg-white/90 border-red-200 text-red-700' : 'bg-white/90 border-blue-200 text-blue-700'}`}
+        //                 >
+        //                     {toast.type === 'success' ? <CheckCircle size={20} /> : toast.type === 'error' ? <XCircle size={20} /> : <AlertCircle size={20} />}
+        //                     <span className="text-sm font-medium">{toast.message}</span>
+        //                     <button onClick={() => removeToast(toast.id)} className="ml-auto opacity-50 hover:opacity-100"><X size={16} /></button>
+        //                 </motion.div>
+        //             ))}
+        //         </AnimatePresence>
+        //     </div>
 
-            {/* Sidebar */}
-            <SidebarPage
-                isMobileOpen={isMobileMenuOpen}
-                setIsMobileOpen={setIsMobileMenuOpen}
-            //user={{ fullName: 'Admin', email: 'admin@dthu.edu.vn' }}
-            />
-
+        //     {/* Sidebar */}
+        //     <SidebarPage
+        //         isMobileOpen={isMobileMenuOpen}
+        //         setIsMobileOpen={setIsMobileMenuOpen}
+        //     //user={{ fullName: 'Admin', email: 'admin@dthu.edu.vn' }}
+        //     />
+        <>
             <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
                 {/* --- HEADER --- */}
                 {!selectedDocument && (
@@ -623,6 +627,7 @@ export default function AdminDashboard() {
                     </AnimatePresence>
                 </div>
             </main>
-        </div>
+            {/* </div > */}
+        </>
     );
 }
