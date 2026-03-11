@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
-// Đã thay Camera thành Upload
-import { Save, User, Mail, Phone, MapPin, Calendar, CheckCircle, Upload } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Save, User, Mail, Phone, MapPin,
+    Calendar, CheckCircle, Upload, Shield, Clock, Camera
+} from 'lucide-react';
 import Sidebar from '@/pages/SidebarPage';
 
 interface UserProfile {
@@ -25,10 +27,8 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Fetch dữ liệu cá nhân
     useEffect(() => {
@@ -52,11 +52,10 @@ export default function ProfilePage() {
         setProfile(prev => prev ? { ...prev, [name]: value } : null);
     };
 
+    // Hàm xử lý lưu thông tin text
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
-        setMessage(null);
-
         try {
             const payload = {
                 email: profile?.email,
@@ -72,173 +71,228 @@ export default function ProfilePage() {
             });
 
             setProfile(res.data);
-            setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
-
-            // Xóa thông báo sau 3s
-            setTimeout(() => setMessage(null), 3000);
+            showToast('success', 'Cập nhật thông tin thành công!');
         } catch (error: any) {
-            setMessage({ type: 'error', text: error.response?.data?.detail || 'Lỗi khi cập nhật!' });
+            showToast('error', error.response?.data?.detail || 'Lỗi khi cập nhật!');
         } finally {
             setIsSaving(false);
         }
     };
 
-    if (isLoading) return <div className="flex h-screen items-center justify-center">Đang tải dữ liệu...</div>;
+    // Hàm tự động Upload Avatar khi người dùng chọn file
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
+        setIsUploading(true);
+        // Hiển thị tạm ảnh vừa chọn (Optimistic UI)
+        const tempUrl = URL.createObjectURL(file);
+        setProfile(prev => prev ? { ...prev, avatar_url: tempUrl } : null);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await axios.post('http://127.0.0.1:8000/auth/me/avatar', formData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Cập nhật URL thật từ server
+            setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : null);
+            showToast('success', 'Đã cập nhật ảnh đại diện!');
+        } catch (err) {
+            showToast('error', 'Lỗi khi tải ảnh lên. Vui lòng thử lại!');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const showToast = (type: 'success' | 'error', text: string) => {
+        setMessage({ type, text });
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500 font-medium">Đang tải dữ liệu...</div>;
+
+    // Xử lý logic hiển thị ảnh mượt mà (chặn lỗi hiển thị sai link)
     const displayName = profile?.full_name || profile?.username || 'User';
-    const avatarUrl = `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&size=256&bold=true`;
+    const fallbackAvatar = `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&size=256&bold=true`;
+
+    const getAvatarSrc = () => {
+        const url = profile?.avatar_url;
+        if (!url) return fallbackAvatar;
+        // Nếu là blob (ảnh preview tạm) thì dùng luôn
+        if (url.startsWith('blob:')) return url;
+        // Nếu là link backend
+        return `http://127.0.0.1:8000${url}`;
+    };
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
             <Sidebar isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
 
-            <div className="flex-1 flex flex-col h-screen overflow-y-auto">
+            <div className="flex-1 flex flex-col h-screen overflow-y-auto relative">
+                {/* Header Navbar */}
                 <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center px-4 lg:px-8 sticky top-0 z-30">
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 mr-3 text-slate-600">
-                        <User size={24} />
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 mr-3 text-slate-600 bg-slate-100 rounded-lg">
+                        <User size={20} />
                     </button>
                     <h1 className="font-bold text-lg text-slate-800">Hồ sơ cá nhân</h1>
                 </header>
 
-                <div className="p-4 lg:p-8 max-w-4xl mx-auto w-full">
+                {/* Thông báo (Toast) góc phải trên */}
+                <AnimatePresence>
                     {message && (
-                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                            className={`p-4 mb-6 rounded-xl flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 50 }}
+                            className={`fixed top-20 right-8 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}
                         >
                             {message.type === 'success' ? <CheckCircle size={20} /> : <User size={20} />}
-                            <span className="font-medium">{message.text}</span>
+                            <span className="font-medium text-sm">{message.text}</span>
                         </motion.div>
                     )}
+                </AnimatePresence>
 
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                        {/* Header Cover */}
-                        <div className="h-32 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+                <div className="p-4 lg:p-8 max-w-6xl mx-auto w-full">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                        <div className="px-6 sm:px-10 pb-10">
-                            <div className="relative flex flex-col sm:flex-row sm:items-end gap-6 -mt-16 mb-10">
-                                <div className="relative w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white shrink-0">
-                                    <img
-                                        src={previewUrl || profile?.avatar_url || avatarUrl}
-                                        alt="Avatar"
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <label
-                                        className="absolute bottom-1 right-1 bg-white rounded-full p-1.5 shadow cursor-pointer hover:bg-blue-50"
-                                        title="Tải ảnh lên"
-                                    >
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    setSelectedFile(file);
-                                                    setPreviewUrl(URL.createObjectURL(file));
-                                                }
-                                            }}
-                                            className="hidden"
+                        {/* CỘT TRÁI: CARD AVATAR & INFO */}
+                        <div className="lg:col-span-1">
+                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
+                                <div className="h-28 bg-gradient-to-br from-blue-600 to-indigo-700"></div>
+
+                                <div className="px-6 pb-6 text-center relative">
+                                    {/* Khung Avatar */}
+                                    <div className="relative w-36 h-36 mx-auto -mt-18 rounded-full border-4 border-white shadow-lg bg-white group mb-4">
+                                        <img
+                                            src={getAvatarSrc()}
+                                            alt="Avatar"
+                                            className="w-full h-full rounded-full object-cover"
                                         />
-                                        {/* Đổi icon thành Upload */}
-                                        <Upload size={18} className="text-blue-600" />
-                                    </label>
-                                </div>
-                                <div className="flex-1 pb-2">
-                                    <h2 className="text-2xl font-bold text-slate-800">{displayName}</h2>
-                                    <p className="text-slate-500 font-medium">@{profile?.username} • Vai trò: <span className="text-blue-600 uppercase text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">{profile?.role}</span></p>
+
+                                        {/* Hiệu ứng loading khi upload */}
+                                        {isUploading && (
+                                            <div className="absolute inset-0 bg-white/70 rounded-full flex items-center justify-center backdrop-blur-sm z-10">
+                                                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            </div>
+                                        )}
+
+                                        {/* Nút Upload ẩn hiện khi hover */}
+                                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
+                                            <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={isUploading} />
+                                            <Camera size={28} className="text-white mb-1" />
+                                            <span className="text-white text-xs font-bold uppercase tracking-wider">Đổi ảnh</span>
+                                        </label>
+                                    </div>
+
+                                    <h2 className="text-xl font-bold text-slate-800">{displayName}</h2>
+                                    <p className="text-slate-500 text-sm mb-4">@{profile?.username}</p>
+
+                                    <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-bold border border-blue-100 mb-6">
+                                        <Shield size={16} />
+                                        {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
+                                    </div>
+
+                                    <div className="bg-slate-50 rounded-2xl p-4 text-left border border-slate-100 space-y-3">
+                                        <div className="flex items-center gap-3 text-sm">
+                                            <Mail size={16} className="text-slate-400 shrink-0" />
+                                            <span className="text-slate-600 truncate">{profile?.email}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-sm">
+                                            <Clock size={16} className="text-slate-400 shrink-0" />
+                                            <span className="text-slate-600">Tham gia: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN') : '---'}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Form cập nhật */}
-                            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                                <div className="md:col-span-2">
-                                    <h3 className="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Thông tin liên hệ</h3>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Họ và tên</label>
-                                    <div className="relative">
-                                        <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="text" name="full_name" value={profile?.full_name || ''} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" placeholder="Nhập họ và tên..." />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Email</label>
-                                    <div className="relative">
-                                        <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="email" name="email" value={profile?.email || ''} onChange={handleChange} required className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Số điện thoại</label>
-                                    <div className="relative">
-                                        <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input type="tel" name="phone" value={profile?.phone || ''} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" placeholder="0123 456 789" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Ngày sinh</label>
-                                    <div className="relative">
-                                        <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                        <input type="date" name="date_of_birth" value={profile?.date_of_birth || ''} onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Giới tính</label>
-                                    <select name="gender" value={profile?.gender || ''} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none">
-                                        <option value="">Chưa chọn</option>
-                                        <option value="Nam">Nam</option>
-                                        <option value="Nữ">Nữ</option>
-                                        <option value="Khác">Khác</option>
-                                    </select>
-                                </div>
-
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-semibold text-slate-600 mb-2">Địa chỉ</label>
-                                    <div className="relative">
-                                        <MapPin size={18} className="absolute left-3 top-3 text-slate-400" />
-                                        <textarea name="address" value={profile?.address || ''} onChange={handleChange} rows={2} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none resize-none" placeholder="Số nhà, Phường, Thành phố..." />
-                                    </div>
-                                </div>
-
-                                <div className="md:col-span-2 pt-4 flex justify-end">
-                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-70 active:scale-95">
-                                        <Save size={18} />
-                                        {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                                    </button>
-                                    {selectedFile && (
-                                        <button
-                                            type="button"
-                                            onClick={async () => {
-                                                if (!selectedFile) return;
-                                                const formData = new FormData();
-                                                formData.append('file', selectedFile);
-
-                                                try {
-                                                    const res = await axios.post(
-                                                        'http://127.0.0.1:8000/auth/me/avatar',
-                                                        formData,
-                                                        { headers: { Authorization: `Bearer ${token}` } }
-                                                    );
-                                                    setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : null);
-                                                    setSelectedFile(null);
-                                                    setPreviewUrl(null);
-                                                    setMessage({ type: 'success', text: 'Avatar đã được cập nhật!' });
-                                                } catch (err) {
-                                                    setMessage({ type: 'error', text: 'Lỗi khi tải avatar lên' });
-                                                }
-                                            }}
-                                            className="ml-3 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center gap-2"
-                                        >
-                                            <Upload size={18} /> Lưu Avatar
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
                         </div>
+
+                        {/* CỘT PHẢI: FORM CHỈNH SỬA THÔNG TIN */}
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                                <div className="mb-6 border-b border-slate-100 pb-4">
+                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                        <User className="text-blue-600" size={22} />
+                                        Thông tin chi tiết
+                                    </h3>
+                                    <p className="text-sm text-slate-500 mt-1">Quản lý và cập nhật thông tin cá nhân của bạn.</p>
+                                </div>
+
+                                <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Họ và tên</label>
+                                        <input
+                                            type="text" name="full_name" value={profile?.full_name || ''} onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                            placeholder="Nhập họ và tên đầy đủ..."
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email liên hệ</label>
+                                        <input
+                                            type="email" name="email" value={profile?.email || ''} onChange={handleChange} required
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Số điện thoại</label>
+                                        <input
+                                            type="tel" name="phone" value={profile?.phone || ''} onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                            placeholder="09xx xxx xxx"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Giới tính</label>
+                                        <select
+                                            name="gender" value={profile?.gender || ''} onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm cursor-pointer"
+                                        >
+                                            <option value="">Chưa chọn</option>
+                                            <option value="Nam">Nam</option>
+                                            <option value="Nữ">Nữ</option>
+                                            <option value="Khác">Khác</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ngày sinh</label>
+                                        <input
+                                            type="date" name="date_of_birth" value={profile?.date_of_birth || ''} onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm cursor-pointer"
+                                        />
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Địa chỉ hiện tại</label>
+                                        <textarea
+                                            name="address" value={profile?.address || ''} onChange={handleChange} rows={3}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none resize-none text-sm"
+                                            placeholder="Số nhà, Tên đường, Phường/Xã..."
+                                        />
+                                    </div>
+
+                                    <div className="sm:col-span-2 pt-4 mt-2 border-t border-slate-100 flex justify-end">
+                                        <button
+                                            type="submit" disabled={isSaving}
+                                            className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all disabled:opacity-70 active:scale-95 min-w-[160px]"
+                                        >
+                                            {isSaving ? (
+                                                <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang lưu...</>
+                                            ) : (
+                                                <><Save size={18} /> Lưu thay đổi</>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

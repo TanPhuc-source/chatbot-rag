@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     date_of_birth: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+    avatar_url: Optional[str] = None  # <--- THÊM DÒNG NÀY
     role: str
     is_active: bool
     created_at: datetime
