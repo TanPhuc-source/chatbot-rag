@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import axios, { AxiosError } from 'axios'
 import logoImage from '../components/images/images.jpg';
+import { useAuthStore } from '@/store/authStore';
 
 // --- Định nghĩa kiểu dữ liệu ---
 interface StatusState {
@@ -27,6 +28,7 @@ interface FormDataState {
 
 export default function LoginPage() {
     const navigate = useNavigate()
+    const authLogin = useAuthStore((s) => s.login);
 
     // Quản lý trạng thái form
     const [isLoginMode, setIsLoginMode] = useState<boolean>(true)
@@ -98,8 +100,7 @@ export default function LoginPage() {
                 })
 
                 const { access_token, role } = response.data;
-                localStorage.setItem('access_token', access_token);
-                localStorage.setItem('user_role', role);
+                authLogin(access_token, role, username);
 
                 setStatus({ success: true, message: 'Đăng nhập thành công! Đang chuyển hướng...' })
 
