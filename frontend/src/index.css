@@ -59,7 +59,7 @@ html,body{overflow:hidden;width:100%;height:100%;position:fixed}
 .sb-header{padding:20px 16px 16px;border-bottom:1px solid var(--sb-border)}
 .sb-logo-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .sb-logo-icon{width:34px;height:34px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#1a5fb4,#2a80d8);box-shadow:0 4px 14px rgba(26,95,180,0.45);display:flex;align-items:center;justify-content:center}
-.sb-title{font-size:12px;font-weight:700;color:var(--sb-title);line-height:1.2;letter-spacing:0.01em;margin:0}
+.sb-title{font-size:13px;font-weight:700;color:var(--sb-title);line-height:1.2;letter-spacing:0.01em;margin:0}
 .sb-sub{font-size:10px;color:var(--sb-sub);line-height:1.2;margin:2px 0 0}
 .sb-theme-btn{display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;font-family:inherit;background:var(--sb-badge-bg);border:1px solid var(--sb-badge-border);color:var(--sb-badge-text);font-size:11px;cursor:pointer;transition:all 0.15s}
 .sb-theme-btn:hover{filter:brightness(1.15)}
@@ -94,7 +94,7 @@ html,body{overflow:hidden;width:100%;height:100%;position:fixed}
 .suggest-card:hover{transform:translateY(-3px) scale(1.015)!important}
 .messages-scroll{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;-webkit-overflow-scrolling:touch}
 
-.prose-chat{font-size:14px;line-height:1.72;color:var(--text-secondary)}
+.prose-chat{font-size:15px;line-height:1.75;color:var(--text-secondary)}
 .prose-chat p{margin-bottom:8px}
 .prose-chat p:last-child{margin-bottom:0}
 .prose-chat strong{color:var(--text-primary);font-weight:600}
