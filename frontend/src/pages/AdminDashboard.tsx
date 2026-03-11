@@ -385,7 +385,7 @@ export default function AdminDashboard() {
             <SidebarPage
                 isMobileOpen={isMobileMenuOpen}
                 setIsMobileOpen={setIsMobileMenuOpen}
-                user={{ fullName: 'Admin', email: 'admin@dthu.edu.vn' }}
+            //user={{ fullName: 'Admin', email: 'admin@dthu.edu.vn' }}
             />
 
             <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
                                     </div>
 
                                     {/* Sidebar Info */}
-                                    <div className="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 hidden xl:flex">
+                                    <div className="w-80 bg-white border-l border-slate-200 flex-col shrink-0 hidden xl:flex">
                                         <div className="p-5 border-b border-slate-100">
                                             <h3 className="font-bold text-slate-800 flex items-center gap-2"><Info size={18} className="text-blue-600" /> Thông tin tệp</h3>
                                         </div>

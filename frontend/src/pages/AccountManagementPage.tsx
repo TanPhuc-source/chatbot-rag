@@ -25,6 +25,7 @@ interface UserData {
     date_of_birth?: string;
     phone?: string;
     address?: string;
+    avatar_url?: string;
 }
 
 export default function AccountManagementPage() {
@@ -321,7 +322,15 @@ export default function AccountManagementPage() {
 
                                     <div className="px-6 pb-6 relative">
                                         <div className="w-24 h-24 mx-auto -mt-12 bg-white rounded-full p-1.5 shadow-lg relative z-10 mb-4">
-                                            <img src={`https://ui-avatars.com/api/?name=${viewingUser.full_name || viewingUser.username}&background=0D8ABC&color=fff&size=128`} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                                            <img
+                                                src={
+                                                    viewingUser.avatar_url
+                                                        ? `http://127.0.0.1:8000${viewingUser.avatar_url}`
+                                                        : `https://ui-avatars.com/api/?name=${viewingUser.full_name || viewingUser.username}&background=0D8ABC&color=fff&size=128&bold=true`
+                                                }
+                                                alt="Avatar"
+                                                className="w-full h-full rounded-full object-cover"
+                                            />
                                         </div>
 
                                         <div className="text-center mb-6">
@@ -381,7 +390,7 @@ export default function AccountManagementPage() {
                                     transition={{ duration: 0.2 }}
                                     className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl my-8 relative flex flex-col max-h-[90vh]"
                                 >
-                                    <form onSubmit={handleUpsertSubmit} className="flex flex-col h-full overflow-hidden">
+                                    <form onSubmit={handleUpsertSubmit} className="flex flex-col h-full overflow-hidden rounded-2xl">
                                         {/* HEADER */}
                                         <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center shrink-0">
                                             <div>

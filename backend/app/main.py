@@ -1,6 +1,8 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import chat, upload, auth, admin, history
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI):
     logger.info("👋 Shutting down.")
 
 
+# 1. KHỞI TẠO APP (Chỉ 1 lần duy nhất)
 app = FastAPI(
     title="RAG Edu API",
     version="1.0.0",
@@ -33,6 +36,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# 2. CẤU HÌNH THƯ MỤC UPLOADS (Phải đặt ngay sau khi khởi tạo app)
+os.makedirs("uploads/avatars", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+
+# 3. CẤU HÌNH CORS MIDDLEWARE
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:5173"],
@@ -41,6 +50,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# 4. GẮN CÁC ROUTER API
 # ── Người 1: RAG core ─────────────────────────────────────────────────────
 app.include_router(chat.router,    prefix="/chat",    tags=["Chat"])
 app.include_router(upload.router,  prefix="/upload",  tags=["Upload"])

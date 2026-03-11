@@ -25,6 +25,7 @@ interface UserProfile {
     email: string;
     full_name: string | null;
     role: string;
+    avatar_url?: string | null; // Nếu API trả về URL avatar, nếu không có thì sẽ tạo tự động
 }
 
 export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
@@ -33,6 +34,7 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
 
     // FETCH THÔNG TIN USER TỪ API
     useEffect(() => {
@@ -84,10 +86,12 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
         );
     };
 
-    // Tạo Avatar tự động
+    // Tạo Avatar tự động hoặc lấy từ Backend
     const displayName = currentUser?.full_name || currentUser?.username || 'User';
-    const avatarUrl = `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&bold=true`;
 
+    const avatarUrl = currentUser?.avatar_url
+        ? `http://127.0.0.1:8000${currentUser.avatar_url}`
+        : `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&bold=true`;
     return (
         <>
             {isMobileOpen && (
