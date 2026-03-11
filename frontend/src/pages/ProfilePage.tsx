@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import {
     Save, User, Mail, Phone, MapPin,
     Calendar, CheckCircle, Upload, Shield, Clock, Camera
@@ -140,19 +140,14 @@ export default function ProfilePage() {
                 </header>
 
                 {/* Thông báo (Toast) góc phải trên */}
-                <AnimatePresence>
-                    {message && (
-                        <motion.div
-                            initial={{ opacity: 0, x: 50 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 50 }}
-                            className={`fixed top-20 right-8 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}
-                        >
-                            {message.type === 'success' ? <CheckCircle size={20} /> : <User size={20} />}
-                            <span className="font-medium text-sm">{message.text}</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {message && (
+                    <div
+                        className={`fixed top-20 right-8 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border transition-all ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}
+                    >
+                        {message.type === 'success' ? <CheckCircle size={20} /> : <User size={20} />}
+                        <span className="font-medium text-sm">{message.text}</span>
+                    </div>
+                )}
 
                 <div className="p-4 lg:p-8 max-w-6xl mx-auto w-full">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

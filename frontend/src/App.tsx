@@ -3,15 +3,19 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AdminLayout from '@/pages/AdminLayout';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AccountManagementPage from '@/pages/AccountManagementPage';
-import LoginPage from '@/pages/LoginPage'; // Giả sử bạn có trang Login
-import ProfilePage from '@/pages/ProfilePage'; // Giả sử bạn có trang Profile
+import LoginPage from '@/pages/LoginPage';
+import ProfilePage from '@/pages/ProfilePage';
+import ChatPage from '@/pages/ChatPage'; // ← THÊM
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Giả sử bạn có route Login ở ngoài */}
+        {/* Route chính — giao diện Chat */}
+        <Route path="/" element={<ChatPage />} />
+
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
 
         {/* KHU VỰC ADMIN SỬ DỤNG LAYOUT */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -20,9 +24,6 @@ export default function App() {
 
           {/* Khi URL là "/admin/accounts", nó sẽ hiển thị AccountManagementPage chui vào chỗ <Outlet /> */}
           <Route path="accounts" element={<AccountManagementPage />} />
-          {/* Thêm route cho trang Profile nếu cần */}
-          <Route path="profile" element={<ProfilePage />} />
-
           {/* Thêm các trang con khác của Admin tại đây... */}
         </Route>
       </Routes>
