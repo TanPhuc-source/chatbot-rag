@@ -4,6 +4,7 @@ import LoginPage from "@/pages/LoginPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 // 1. Import trang Quản lý tài khoản vừa tạo
 import AccountManagementPage from "@/pages/AccountManagementPage";
+import ProfilePage from "@/pages/ProfilePage";
 
 export default function App() {
   return (
@@ -14,8 +15,10 @@ export default function App() {
 
         {/* Cụm Route dành cho Admin */}
         <Route path="/admin" element={<AdminDashboard />} />
-        {/* 2. Thêm route mới cho phần accounts */}
+        {/* Thêm route mới cho phần accounts */}
         <Route path="/admin/accounts" element={<AccountManagementPage />} />
+        {/* Route cho trang cá nhân */}
+        <Route path="/profile" element={<ProfilePage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

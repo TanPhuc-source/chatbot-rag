@@ -19,7 +19,7 @@ from datetime import datetime
 
 from app.db.database import get_db
 from app.db import models
-from app.api.auth import UserResponse
+from app.api.auth import UserResponse, hash_password
 from app.core.db_dependencies import get_admin_user
 
 router = APIRouter()
@@ -49,6 +49,16 @@ class UserUpdate(BaseModel):
 class UserRoleUpdate(BaseModel):
     role: str
 
+class AdminUserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    role: str
+    full_name: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
@@ -157,3 +167,34 @@ def toggle_user_status(
 
     action = "Mở khóa" if user.is_active else "Khóa"
     return {"message": f"Đã {action} tài khoản {user.username} thành công!"}
+
+@router.post("/users", response_model=UserResponse)
+def create_user_by_admin(
+    user_data: AdminUserCreate,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    # Kiểm tra trùng lặp username
+    if db.query(models.User).filter(models.User.username == user_data.username).first():
+        raise HTTPException(status_code=400, detail="Tên đăng nhập đã tồn tại")
+        
+    # Kiểm tra trùng lặp email
+    if db.query(models.User).filter(models.User.email == user_data.email).first():
+        raise HTTPException(status_code=400, detail="Email này đã được sử dụng")
+
+    new_user = models.User(
+        username=user_data.username,
+        email=user_data.email,
+        hashed_password=hash_password(user_data.password),
+        role=user_data.role, # Lấy role do Admin chỉ định (admin hoặc user)
+        full_name=user_data.full_name,
+        gender=user_data.gender,
+        date_of_birth=user_data.date_of_birth,
+        phone=user_data.phone,
+        address=user_data.address,
+        is_active=True # Mặc định tài khoản do Admin tạo sẽ được kích hoạt luôn
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
