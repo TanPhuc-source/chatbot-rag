@@ -51,7 +51,7 @@ export default function ChatPage() {
         {/* Header */}
         <header
           className="main-header"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", height: 56, flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(12px, 3vw, 24px)", height: "clamp(52px, 8vw, 64px)", flexShrink: 0 }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Hamburger — chỉ hiện trên mobile */}
@@ -67,14 +67,6 @@ export default function ChatPage() {
               {/* Logo nhỏ — chỉ hiện trên mobile */}
               <div className="lg:!hidden" style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#1a5fb4,#2a80d8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Sparkles size={13} color="white" />
-              </div>
-              <div>
-                <p className="font-display" style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, lineHeight: 1.3, letterSpacing: "-0.01em" }}>
-                  {activeId ? "Cuộc trò chuyện" : "Trợ lý AI Trung tâm Ngoại ngữ – Tin học"}
-                </p>
-                {!activeId && (
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, lineHeight: 1.2, marginTop: 1 }}>Đại học Đồng Tháp</p>
-                )}
               </div>
             </div>
           </div>
