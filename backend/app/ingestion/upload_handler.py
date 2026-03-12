@@ -5,6 +5,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+from sqlalchemy.orm import Session
+
 from app.config import get_settings
 from app.ingestion.cleaner import clean_chunks
 from app.ingestion.indexer import index_chunks, delete_document
@@ -30,7 +32,125 @@ class UploadResult:
 async def handle_upload(
     file_bytes: bytes,
     filename: str,
+    db: Session | None = None,
+    uploaded_by: int | None = None,
 ) -> UploadResult:
+    # 1. Validate
+    suffix = Path(filename).suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        return UploadResult(
+            document_id="",
+            filename=filename,
+            chunks_indexed=0,
+            status="failed",
+            error=f"Định dạng '{suffix}' không được hỗ trợ. Chấp nhận: {', '.join(ALLOWED_EXTENSIONS)}",
+        )
+
+    size_mb = len(file_bytes) / (1024 * 1024)
+    if size_mb > MAX_FILE_SIZE_MB:
+        return UploadResult(
+            document_id="",
+            filename=filename,
+            chunks_indexed=0,
+            status="failed",
+            error=f"File quá lớn ({size_mb:.1f}MB). Tối đa {MAX_FILE_SIZE_MB}MB.",
+        )
+
+    document_id = str(uuid.uuid4())
+    mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    settings = get_settings()
+
+    # 2. Lưu bản ghi Document vào PostgreSQL ngay lập tức (status = "processing")
+    db_doc = None
+    if db is not None:
+        from app.db.models import Document
+        db_doc = Document(
+            id=document_id,
+            filename=filename,
+            file_path="",          # không lưu file gốc
+            status="processing",
+            uploaded_by=uploaded_by,
+        )
+        db.add(db_doc)
+        db.commit()
+        db.refresh(db_doc)
+        logger.info(f"Saved Document record to PostgreSQL: id={document_id}, filename={filename}")
+
+    try:
+        logger.info(f"Processing upload: {filename} ({size_mb:.2f}MB) → doc_id={document_id}")
+
+        # 3. Extract + chunk
+        if suffix == ".json":
+            chunks = load_json_bytes(file_bytes, filename=filename)
+        else:
+            chunks = await load_bytes(file_bytes, filename=filename, mime_type=mime_type)
+
+        if not chunks:
+            if db_doc is not None:
+                db_doc.status = "error"
+                db.commit()
+            return UploadResult(
+                document_id=document_id,
+                filename=filename,
+                chunks_indexed=0,
+                status="failed",
+                error="Không trích xuất được nội dung từ file. File có thể bị lỗi hoặc chỉ chứa ảnh scan.",
+            )
+
+        # 4. Làm sạch dữ liệu
+        chunks = clean_chunks(chunks)
+
+        if not chunks:
+            if db_doc is not None:
+                db_doc.status = "error"
+                db.commit()
+            return UploadResult(
+                document_id=document_id,
+                filename=filename,
+                chunks_indexed=0,
+                status="failed",
+                error="Sau khi làm sạch, không còn nội dung hữu ích. File có thể chứa toàn header/footer hoặc ký tự rác.",
+            )
+
+        # 5. [Contextual Headers]
+        if settings.ENABLE_CONTEXTUAL_HEADERS:
+            logger.info(f"Enriching chunks with contextual headers for: {filename}")
+            chunks = await enrich_chunks_with_headers(
+                chunks,
+                max_chunks=settings.CONTEXTUAL_HEADERS_MAX_CHUNKS,
+            )
+
+        # 6. Embed + index vào ChromaDB
+        total_indexed = await index_chunks(chunks, document_id=document_id)
+
+        # 7. Cập nhật status → "indexed"
+        if db_doc is not None:
+            db_doc.status = "indexed"
+            db.commit()
+
+        logger.info(f"✅ Upload success: {filename} → {total_indexed} chunks indexed")
+        return UploadResult(
+            document_id=document_id,
+            filename=filename,
+            chunks_indexed=total_indexed,
+            status="indexed",
+        )
+
+    except Exception as e:
+        logger.error(f"Upload failed for {filename}: {e}")
+        # Dọn dẹp ChromaDB nếu đã index 1 phần
+        await delete_document(document_id)
+        # Cập nhật status lỗi trong DB
+        if db_doc is not None:
+            db_doc.status = "error"
+            db.commit()
+        return UploadResult(
+            document_id=document_id,
+            filename=filename,
+            chunks_indexed=0,
+            status="failed",
+            error=str(e),
+        )
     # 1. Validate
     suffix = Path(filename).suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:

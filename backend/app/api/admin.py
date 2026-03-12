@@ -28,10 +28,10 @@ router = APIRouter()
 # ── Schemas ────────────────────────────────────────────────────────────────
 
 class DocumentResponse(BaseModel):
-    id: int
+    id: str          # UUID string — khớp với ChromaDB document_id
     filename: str
     status: str
-    uploaded_by: int
+    uploaded_by: int | None = None
     created_at: datetime
 
     class Config:
@@ -76,16 +76,13 @@ def get_all_documents(
 
 @router.delete("/documents/{document_id}")
 def delete_document(
-    document_id: int,
+    document_id: str,
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
     doc = db.query(models.Document).filter(models.Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
-
-    if os.path.exists(doc.file_path):
-        os.remove(doc.file_path)
 
     db.delete(doc)
     db.commit()
