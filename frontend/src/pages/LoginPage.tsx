@@ -30,7 +30,6 @@ export default function LoginPage() {
     const navigate = useNavigate()
     const authLogin = useAuthStore((s) => s.login);
 
-    // Quản lý trạng thái form
     const [isLoginMode, setIsLoginMode] = useState<boolean>(true)
     const [showPassword, setShowPassword] = useState<boolean>(false)
     const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -42,20 +41,18 @@ export default function LoginPage() {
         gender: '', date_of_birth: '', phone: '', address: ''
     })
 
-    // --- TỰ ĐỘNG TẮT MODAL THÔNG BÁO SAU 8 GIÂY ---
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout>;
         if (status) {
             timer = setTimeout(() => {
                 setStatus(null);
-            }, 8000); // 8000ms = 8s
+            }, 8000);
         }
         return () => {
             if (timer) clearTimeout(timer);
         };
     }, [status]);
 
-    // Animation variants
     const fadeInUp = {
         initial: { opacity: 0, y: 20 },
         animate: { opacity: 1, y: 0 },
@@ -90,7 +87,6 @@ export default function LoginPage() {
 
         try {
             if (isLoginMode) {
-                // XỬ LÝ ĐĂNG NHẬP
                 const urlEncodedData = new URLSearchParams()
                 if (username) urlEncodedData.append('username', username)
                 if (password) urlEncodedData.append('password', password)
@@ -110,7 +106,6 @@ export default function LoginPage() {
                 }, 1200)
 
             } else {
-                // XỬ LÝ ĐĂNG KÝ – DÙNG formData state (đã được kiểm tra ở nextStep)
                 const payload = {
                     username: formData.username,
                     email: formData.email,
@@ -177,15 +172,13 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 font-sans relative overflow-hidden">
-            {/* Animated background elements */}
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-indigo-50 to-purple-50 p-4 font-sans relative overflow-hidden">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-sky-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
                 <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
             </div>
 
-            {/* --- MODAL THÔNG BÁO --- */}
             <AnimatePresence>
                 {status && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
@@ -216,7 +209,7 @@ export default function LoginPage() {
 
                             <button
                                 onClick={() => setStatus(null)}
-                                className={`w-full py-2.5 rounded-xl font-bold text-white transition-all shadow-md active:scale-95 ${status.success ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}
+                                className={`w-full py-2.5 rounded-xl font-bold text-white transition-all shadow-md active:scale-95 ${status.success ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'bg-sky-600 hover:bg-sky-700 shadow-sky-200'}`}
                             >
                                 {status.success ? 'Đang xử lý...' : 'Đóng'}
                             </button>
@@ -225,7 +218,6 @@ export default function LoginPage() {
                 )}
             </AnimatePresence>
 
-            {/* Main Card */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -234,7 +226,6 @@ export default function LoginPage() {
             >
                 <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
 
-                    {/* ================= CỘT TRÁI: LOGO & THÔNG TIN ================= */}
                     <div className="hidden lg:flex flex-col items-center justify-center p-12 bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#312e81] text-white text-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.dthu.edu.vn/images/slider/02.jpg')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a8a]/90 to-transparent"></div>
@@ -243,27 +234,26 @@ export default function LoginPage() {
                             <div className="w-28 h-28 bg-white rounded-full p-2 shadow-xl mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-500">
                                 <img src={logoImage} alt="Logo" className="w-full h-full object-cover rounded-full" />
                             </div>
-                            <h3 className="text-sm font-bold tracking-[0.2em] text-blue-200 uppercase mb-2">Trường Đại Học Đồng Tháp</h3>
-                            <h2 className="text-2xl font-extrabold leading-snug mb-8 text-white uppercase border-b-2 border-blue-400/30 pb-6 w-full max-w-xs mx-auto">
+                            <h3 className="text-sm font-bold tracking-[0.2em] text-sky-200 uppercase mb-2">Trường Đại Học Đồng Tháp</h3>
+                            <h2 className="text-2xl font-extrabold leading-snug mb-8 text-white uppercase border-b-2 border-sky-400/30 pb-6 w-full max-w-xs mx-auto">
                                 Trung Tâm <br /> Ngoại Ngữ & Tin Học
                             </h2>
                             <div className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/10">
-                                <p className="text-sm font-medium text-blue-100">
+                                <p className="text-sm font-medium text-sky-100">
                                     Hệ thống Quản lý Chatbot & Hồ sơ quản lý
                                 </p>
                             </div>
                         </div>
-                        <div className="absolute bottom-6 text-[10px] text-blue-300/60 uppercase tracking-widest">
+                        <div className="absolute bottom-6 text-[10px] text-sky-300/60 uppercase tracking-widest">
                             © Dong Thap University
                         </div>
                     </div>
 
-                    {/* ================= CỘT PHẢI: FORM ================= */}
                     <div className="p-8 lg:p-12 bg-white flex flex-col justify-center">
                         <div className="max-w-md mx-auto w-full">
 
                             <div className="lg:hidden flex justify-center mb-6">
-                                <div className="w-16 h-16 bg-blue-50 rounded-full p-1 flex items-center justify-center">
+                                <div className="w-16 h-16 bg-sky-50 rounded-full p-1 flex items-center justify-center">
                                     <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
                                 </div>
                             </div>
@@ -272,32 +262,24 @@ export default function LoginPage() {
                                 <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
                                     {isLoginMode ? 'Đăng Nhập' : 'Tạo Tài Khoản'}
                                 </h2>
-                                {/* <p className="text-gray-500 text-sm">
-                                    {isLoginMode
-                                        ? 'Vui lòng đăng nhập để tiếp tục'
-                                        : 'Điền thông tin để bắt đầu hành trình học tập'}
-                                </p> */}
                             </motion.div>
 
-                            {/* CẬP NHẬT: Progress Steps kéo dài cân đối (Chỉ còn 2 bước) */}
                             {!isLoginMode && (
                                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
                                     <div className="flex items-center w-full mb-2">
                                         {[1, 2].map((step, index) => (
                                             <React.Fragment key={step}>
-                                                {/* Vòng tròn bước */}
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 shrink-0
                                                     ${currentStep >= step
-                                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                                        ? 'bg-sky-600 text-white shadow-lg shadow-sky-200'
                                                         : 'bg-gray-100 text-gray-400'}`}
                                                 >
                                                     {currentStep > step ? <CheckCircle size={16} /> : step}
                                                 </div>
 
-                                                {/* Đường kẻ tự động giãn (flex-1) */}
                                                 {index < 1 && (
                                                     <div className={`flex-1 h-1 mx-2 rounded transition-all duration-300
-                                                        ${currentStep > step ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                                        ${currentStep > step ? 'bg-sky-600' : 'bg-gray-200'}`}
                                                     />
                                                 )}
                                             </React.Fragment>
@@ -310,11 +292,9 @@ export default function LoginPage() {
                                 </motion.div>
                             )}
 
-                            {/* Form */}
                             <form onSubmit={handleSubmit}>
                                 <AnimatePresence mode="wait">
                                     {isLoginMode ? (
-                                        // Login Form
                                         <motion.div
                                             key="login"
                                             variants={fadeInUp}
@@ -328,12 +308,12 @@ export default function LoginPage() {
                                                     Tên đăng nhập <span className="text-rose-500">*</span>
                                                 </label>
                                                 <div className="relative group">
-                                                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+                                                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
                                                     <input
                                                         type="text"
                                                         name="username"
                                                         placeholder="Nhập tên đăng nhập..."
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400"
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
                                                         required
                                                     />
                                                 </div>
@@ -344,19 +324,18 @@ export default function LoginPage() {
                                                     Mật khẩu <span className="text-rose-500">*</span>
                                                 </label>
                                                 <div className="relative group">
-                                                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+                                                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
                                                     <input
                                                         type={showPassword ? "text" : "password"}
                                                         name="password"
                                                         placeholder="••••••••"
-                                                        // Đã thêm [&::-ms-reveal]:hidden [&::-ms-clear]:hidden để ẩn con mắt trình duyệt
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-12 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-12 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sky-600 transition-colors"
                                                     >
                                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                                     </button>
@@ -364,11 +343,8 @@ export default function LoginPage() {
                                             </div>
 
                                             <div className="flex items-center justify-between">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    {/* <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" /> */}
-                                                    {/* <span className="text-sm text-gray-600">Ghi nhớ đăng nhập</span> */}
-                                                </label>
-                                                <button type="button" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                                <label className="flex items-center gap-2 cursor-pointer"></label>
+                                                <button type="button" className="text-sm text-sky-600 hover:text-sky-800 font-medium">
                                                     Quên mật khẩu?
                                                 </button>
                                             </div>
@@ -376,7 +352,7 @@ export default function LoginPage() {
                                             <button
                                                 type="submit"
                                                 disabled={isLoading}
-                                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                                                className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:shadow-sky-300 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
                                             >
                                                 {isLoading ? (
                                                     <Loader2 size={18} className="animate-spin" />
@@ -389,7 +365,6 @@ export default function LoginPage() {
                                             </button>
                                         </motion.div>
                                     ) : (
-                                        // Register Form with Steps
                                         <motion.div
                                             key="register"
                                             variants={stepVariants}
@@ -420,7 +395,7 @@ export default function LoginPage() {
                                                                     value={formData.username}
                                                                     onChange={handleInputChange}
                                                                     placeholder="nguyenvan_a"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
                                                                     required
                                                                 />
                                                             </div>
@@ -438,7 +413,7 @@ export default function LoginPage() {
                                                                     value={formData.email}
                                                                     onChange={handleInputChange}
                                                                     placeholder="your.email@dthu.edu.vn"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
                                                                     required
                                                                 />
                                                             </div>
@@ -456,15 +431,14 @@ export default function LoginPage() {
                                                                     value={formData.password}
                                                                     onChange={handleInputChange}
                                                                     placeholder="••••••••"
-                                                                    // Đã thêm [&::-ms-reveal]:hidden [&::-ms-clear]:hidden để ẩn con mắt trình duyệt
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-10 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-10 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                                                                     required
                                                                     minLength={6}
                                                                 />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setShowPassword(!showPassword)}
-                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600"
+                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sky-600"
                                                                 >
                                                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                                                 </button>
@@ -499,7 +473,7 @@ export default function LoginPage() {
                                                                     value={formData.full_name}
                                                                     onChange={handleInputChange}
                                                                     placeholder="Nguyễn Văn A"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
                                                                 />
                                                             </div>
                                                         </div>
@@ -512,7 +486,7 @@ export default function LoginPage() {
                                                                 name="gender"
                                                                 value={formData.gender}
                                                                 onChange={handleInputChange}
-                                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all"
+                                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all"
                                                             >
                                                                 <option value="" className="text-gray-400">Chọn</option>
                                                                 <option value="Nam">Nam</option>
@@ -532,7 +506,7 @@ export default function LoginPage() {
                                                                     name="date_of_birth"
                                                                     value={formData.date_of_birth}
                                                                     onChange={handleInputChange}
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all"
                                                                 />
                                                             </div>
                                                         </div>
@@ -549,7 +523,7 @@ export default function LoginPage() {
                                                                     value={formData.phone}
                                                                     onChange={handleInputChange}
                                                                     placeholder="0123 456 789"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all placeholder-gray-400"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
                                                                 />
                                                             </div>
                                                         </div>
@@ -566,7 +540,7 @@ export default function LoginPage() {
                                                                     onChange={handleInputChange}
                                                                     rows={1}
                                                                     placeholder="Số nhà, đường, phường, thành phố..."
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 focus:bg-white transition-all resize-none placeholder-gray-400"
+                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all resize-none placeholder-gray-400"
                                                                 />
                                                             </div>
                                                         </div>
@@ -578,15 +552,15 @@ export default function LoginPage() {
                                                                 type="checkbox"
                                                                 checked={agreeTerms}
                                                                 onChange={(e) => setAgreeTerms(e.target.checked)}
-                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                                className="mt-1 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
                                                             />
                                                             <span className="text-xs text-gray-600 group-hover:text-gray-900 transition-colors">
                                                                 Tôi đồng ý với{' '}
-                                                                <button type="button" className="text-blue-600 hover:text-blue-800 font-medium">
+                                                                <button type="button" className="text-sky-600 hover:text-sky-800 font-medium">
                                                                     Điều khoản sử dụng
                                                                 </button>
                                                                 {' '}và{' '}
-                                                                <button type="button" className="text-blue-600 hover:text-blue-800 font-medium">
+                                                                <button type="button" className="text-sky-600 hover:text-sky-800 font-medium">
                                                                     Chính sách bảo mật
                                                                 </button>
                                                             </span>
@@ -595,7 +569,6 @@ export default function LoginPage() {
                                                 </motion.div>
                                             )}
 
-                                            {/* Navigation Buttons */}
                                             {!isLoginMode && (
                                                 <div className="flex gap-3 pt-4">
                                                     {currentStep > 1 && (
@@ -612,7 +585,7 @@ export default function LoginPage() {
                                                         <button
                                                             type="button"
                                                             onClick={nextStep}
-                                                            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold text-sm shadow-lg shadow-blue-200 hover:shadow-xl hover:scale-[1.02] transition-all"
+                                                            className="flex-1 bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3 rounded-lg font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:scale-[1.02] transition-all"
                                                         >
                                                             Tiếp theo
                                                         </button>
@@ -638,7 +611,6 @@ export default function LoginPage() {
                                 </AnimatePresence>
                             </form>
 
-                            {/* Toggle Mode */}
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -649,7 +621,7 @@ export default function LoginPage() {
                                     {isLoginMode ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
                                     <button
                                         onClick={toggleMode}
-                                        className="font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all"
+                                        className="font-semibold text-sky-600 hover:text-sky-800 hover:underline transition-all"
                                     >
                                         {isLoginMode ? "Đăng ký ngay" : "Đăng nhập"}
                                     </button>
