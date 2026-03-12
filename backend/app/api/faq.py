@@ -14,6 +14,7 @@ from typing import Optional
 from datetime import datetime
 
 from app.db.database import get_db
+from app.rag.faq_matcher import invalidate_faq_cache
 from app.db import models
 from app.core.db_dependencies import get_admin_user
 
@@ -66,6 +67,7 @@ def create_faq(
     db.add(faq)
     db.commit()
     db.refresh(faq)
+    invalidate_faq_cache()
     return faq
 
 
@@ -83,6 +85,7 @@ def update_faq(
         setattr(faq, k, v)
     db.commit()
     db.refresh(faq)
+    invalidate_faq_cache()
     return faq
 
 
@@ -97,6 +100,7 @@ def delete_faq(
         raise HTTPException(status_code=404, detail="Không tìm thấy FAQ")
     db.delete(faq)
     db.commit()
+    invalidate_faq_cache()
     return {"message": "Đã xóa FAQ"}
 
 
@@ -112,4 +116,5 @@ def toggle_faq(
     faq.is_active = not faq.is_active
     db.commit()
     db.refresh(faq)
+    invalidate_faq_cache()
     return faq

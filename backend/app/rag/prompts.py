@@ -20,8 +20,28 @@ Nguyên tắc:
 
 # Cache nhẹ trong memory — refresh mỗi 60s
 import time
-_settings_cache: dict = {"prompt": None, "ts": 0.0}
+_settings_cache: dict = {"prompt": None, "temperature": 0.3, "max_tokens": 1024, "ts": 0.0}
 _CACHE_TTL = 60.0
+
+
+def _refresh_cache() -> None:
+    """Load tất cả settings từ DB vào cache."""
+    try:
+        from app.db.database import SessionLocal
+        db = SessionLocal()
+        try:
+            from app.db import models
+            s = db.query(models.BotSettings).filter(models.BotSettings.id == 1).first()
+            _settings_cache["prompt"] = s.system_prompt if s else _DEFAULT_SYSTEM
+            _settings_cache["temperature"] = s.temperature if s else 0.3
+            _settings_cache["max_tokens"] = s.max_tokens if s else 1024
+        finally:
+            db.close()
+    except Exception:
+        _settings_cache["prompt"] = _DEFAULT_SYSTEM
+        _settings_cache["temperature"] = 0.3
+        _settings_cache["max_tokens"] = 1024
+    _settings_cache["ts"] = time.time()
 
 
 def get_system_prompt() -> str:
@@ -29,20 +49,17 @@ def get_system_prompt() -> str:
     now = time.time()
     if _settings_cache["prompt"] and now - _settings_cache["ts"] < _CACHE_TTL:
         return _settings_cache["prompt"]
-    try:
-        from app.db.database import SessionLocal
-        db = SessionLocal()
-        try:
-            from app.db import models
-            s = db.query(models.BotSettings).filter(models.BotSettings.id == 1).first()
-            prompt = s.system_prompt if s else _DEFAULT_SYSTEM
-        finally:
-            db.close()
-    except Exception:
-        prompt = _DEFAULT_SYSTEM
-    _settings_cache["prompt"] = prompt
-    _settings_cache["ts"] = now
-    return prompt
+    _refresh_cache()
+    return _settings_cache["prompt"]
+
+
+def get_llm_params() -> dict:
+    """Lấy temperature và max_tokens từ DB với cache 60 giây."""
+    now = time.time()
+    if _settings_cache["prompt"] and now - _settings_cache["ts"] < _CACHE_TTL:
+        return {"temperature": _settings_cache["temperature"], "max_tokens": _settings_cache["max_tokens"]}
+    _refresh_cache()
+    return {"temperature": _settings_cache["temperature"], "max_tokens": _settings_cache["max_tokens"]}
 
 
 def invalidate_settings_cache():

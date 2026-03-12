@@ -65,7 +65,7 @@ class ChatMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")
-    feedback = relationship("MessageFeedback", back_populates="message", uselist=False)
+    feedback = relationship("MessageFeedback", back_populates="message", uselist=False, cascade="all, delete-orphan")
 
 
 class MessageFeedback(Base):
@@ -73,7 +73,7 @@ class MessageFeedback(Base):
     __tablename__ = "message_feedbacks"
 
     id = Column(Integer, primary_key=True, index=True)
-    message_id = Column(Integer, ForeignKey("chat_messages.id"), unique=True)
+    message_id = Column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), unique=True)
     rating = Column(String, nullable=False)   # "up" | "down"
     comment = Column(Text, nullable=True)     # ghi chú thêm (tùy chọn)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

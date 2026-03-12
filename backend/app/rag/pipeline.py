@@ -22,8 +22,10 @@ from app.rag.prompts import (
     build_explain_prompt,
     build_summarize_prompt,
     build_out_of_scope_response,
+    get_llm_params,
 )
 from app.rag.query_transform import multi_query_search
+from app.rag.faq_matcher import find_matching_faq
 from app.rag.reranker import rerank
 from app.rag.retriever import RetrievedChunk, hybrid_search
 from app.utils.logger import logger
@@ -173,12 +175,17 @@ async def answer(
             chunks_used=0,
         )
 
-    # 2. Build prompt
-    messages = build_qa_prompt(question, chunks, history=history)
+    # 2. Tìm FAQ tương tự (chạy song song với bước 1, không block)
+    faq_match = find_matching_faq(question)
+    faq_answer = faq_match.answer if faq_match else None
 
-    # 3. LLM generate
+    # 3. Build prompt (kèm FAQ nếu có)
+    messages = build_qa_prompt(question, chunks, history=history, faq_answer=faq_answer)
+
+    # 4. LLM generate
     llm = get_llm_provider()
-    answer_text = await llm.chat(messages)
+    llm_params = get_llm_params()
+    answer_text = await llm.chat(messages, **llm_params)
 
     sources = _extract_sources(chunks)
     logger.info(f"RAG answered. Sources: {[s.source_file for s in sources]}")
@@ -212,14 +219,19 @@ async def stream_answer(
         yield build_out_of_scope_response()
         return
 
-    # 2. Build prompt
-    messages = build_qa_prompt(question, chunks, history=history)
+    # 2. Tìm FAQ tương tự
+    faq_match = find_matching_faq(question)
+    faq_answer = faq_match.answer if faq_match else None
 
-    # 3. Stream từ LLM
+    # 3. Build prompt (kèm FAQ nếu có)
+    messages = build_qa_prompt(question, chunks, history=history, faq_answer=faq_answer)
+
+    # 4. Stream từ LLM
     llm = get_llm_provider()
+    llm_params = get_llm_params()
     full_answer = ""
 
-    async for token in llm.stream(messages):
+    async for token in llm.stream(messages, **llm_params):
         full_answer += token
         yield token
 
