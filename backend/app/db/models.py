@@ -32,11 +32,11 @@ class User(Base):
 class Document(Base):
     __tablename__ = "documents"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)   # UUID string — khớp với ChromaDB document_id
     filename = Column(String, index=True, nullable=False)
-    file_path = Column(String, nullable=False)
+    file_path = Column(String, nullable=False, default="")
     status = Column(String, default="uploaded")
-    uploaded_by = Column(Integer, ForeignKey("users.id"))
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="documents")

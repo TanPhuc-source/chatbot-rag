@@ -1,24 +1,51 @@
 """
 Chat API Endpoints
 
-POST /chat          → full response (non-streaming)
-POST /chat/stream   → SSE streaming
-GET  /chat/history/{conversation_id}  → lịch sử hội thoại
+POST /chat        → full response (non-streaming)
+POST /chat/stream → SSE streaming
+
+Auth là tùy chọn — user chưa đăng nhập vẫn chat được,
+nhưng nếu có token thì lưu session vào DB gắn với user đó.
 """
 from __future__ import annotations
 
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordBearer
+from jose import jwt, JWTError
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-#from app.core.dependencies import get_current_user
+from app.config import get_settings
+from app.db.database import get_db
+from app.db import models
 from app.services.chat_service import chat, stream_chat
 from app.utils.logger import logger
 
 router = APIRouter()
+
+oauth2_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+def get_optional_user(
+    token: str | None = Depends(oauth2_optional),
+    db: Session = Depends(get_db),
+) -> models.User | None:
+    """Trả về User nếu có token hợp lệ, None nếu không có hoặc token lỗi."""
+    if not token:
+        return None
+    try:
+        settings = get_settings()
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            return None
+        return db.query(models.User).filter(models.User.username == username).first()
+    except JWTError:
+        return None
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────
@@ -46,16 +73,15 @@ class ChatResponse(BaseModel):
 @router.post("", response_model=ChatResponse)
 async def chat_endpoint(
     body: ChatRequest,
-    #user_id: str = Depends(get_current_user),
+    current_user: models.User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
 ):
-    """
-    Hỏi đáp thông thường — trả về response đầy đủ 1 lần.
-    Dùng khi không cần streaming (test, script).
-    """
     try:
         result = await chat(
             question=body.question,
             conversation_id=body.conversation_id,
+            db=db,
+            user_id=current_user.id if current_user else None,
         )
         return ChatResponse(**result)
     except Exception as e:
@@ -66,20 +92,19 @@ async def chat_endpoint(
 @router.post("/stream")
 async def stream_endpoint(
     body: ChatRequest,
-    #user_id: str = Depends(get_current_user),
+    current_user: models.User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
 ):
     """
-    Streaming chat — trả về Server-Sent Events.
-    Frontend dùng EventSource hoặc fetch với ReadableStream.
-
-    Format SSE:
-      data: {"type": "token", "data": "Hello"}\\n\\n
-      data: {"type": "done",  "data": {...sources...}}\\n\\n
+    Streaming chat — Server-Sent Events.
+    Lưu session vào DB nếu user đã đăng nhập, ẩn danh nếu chưa.
     """
     async def event_generator():
         async for event in stream_chat(
             question=body.question,
             conversation_id=body.conversation_id,
+            db=db,
+            user_id=current_user.id if current_user else None,
         ):
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
@@ -88,6 +113,6 @@ async def stream_endpoint(
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",   # tắt buffering cho nginx
+            "X-Accel-Buffering": "no",
         },
     )

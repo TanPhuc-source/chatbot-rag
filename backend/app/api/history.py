@@ -108,3 +108,76 @@ def delete_session(
     db.delete(session)
     db.commit()
     return {"message": "Đã xóa phiên chat thành công"}
+
+# ── Admin endpoints ────────────────────────────────────────────────────────
+
+from app.core.db_dependencies import get_admin_user
+
+
+class SessionWithUser(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    user_id: int | None
+    username: str | None
+    message_count: int
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/admin/sessions", response_model=list[SessionWithUser])
+def admin_get_all_sessions(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Admin xem tất cả phiên chat của mọi user."""
+    sessions = (
+        db.query(models.ChatSession)
+        .order_by(models.ChatSession.created_at.desc())
+        .offset(skip).limit(limit).all()
+    )
+    result = []
+    for s in sessions:
+        msg_count = db.query(models.ChatMessage).filter(models.ChatMessage.session_id == s.id).count()
+        username = s.owner.username if s.owner else None
+        result.append(SessionWithUser(
+            id=s.id, title=s.title, created_at=s.created_at,
+            user_id=s.user_id, username=username, message_count=msg_count,
+        ))
+    return result
+
+
+@router.get("/admin/sessions/{session_id}/messages", response_model=list[MessageResponse])
+def admin_get_messages(
+    session_id: int,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Admin xem nội dung bất kỳ phiên chat."""
+    session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên chat")
+    return (
+        db.query(models.ChatMessage)
+        .filter(models.ChatMessage.session_id == session_id)
+        .order_by(models.ChatMessage.created_at.asc())
+        .all()
+    )
+
+
+@router.delete("/admin/sessions/{session_id}")
+def admin_delete_session(
+    session_id: int,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """Admin xóa bất kỳ phiên chat."""
+    session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên chat")
+    db.delete(session)
+    db.commit()
+    return {"message": "Đã xóa phiên chat thành công"}

@@ -21,9 +21,13 @@ export function useStream() {
       setStreaming(true);
 
       try {
+        const token = localStorage.getItem('access_token');
         const res = await fetch("/chat/stream", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             question,
             conversation_id: conversationId,
