@@ -5,6 +5,7 @@ export interface Message {
   sources?: SourceDoc[];
   isStreaming?: boolean;
   createdAt: Date;
+  dbId?: number;  // ID tin nhắn trong PostgreSQL (dùng cho feedback)
 }
 
 export interface SourceDoc {
