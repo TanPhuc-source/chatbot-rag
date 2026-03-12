@@ -6,6 +6,7 @@ interface StreamDoneData {
   conversation_id: string;
   sources: SourceDoc[];
   chunks_used: number;
+  assistant_message_id: number;
 }
 
 export function useStream() {

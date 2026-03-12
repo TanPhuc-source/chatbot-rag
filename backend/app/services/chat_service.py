@@ -50,10 +50,14 @@ def _get_history_from_db(db: Session, session_id: int) -> list[dict]:
     return [{"role": m.role, "content": m.content} for m in reversed(msgs)]
 
 
-def _save_messages(db: Session, session_id: int, question: str, answer_text: str) -> None:
+def _save_messages(db: Session, session_id: int, question: str, answer_text: str) -> int:
+    """Returns the assistant message id."""
     db.add(models.ChatMessage(session_id=session_id, role="user", content=question))
-    db.add(models.ChatMessage(session_id=session_id, role="assistant", content=answer_text))
+    asst_msg = models.ChatMessage(session_id=session_id, role="assistant", content=answer_text)
+    db.add(asst_msg)
     db.commit()
+    db.refresh(asst_msg)
+    return asst_msg.id
 
 
 # ── Public API ──────────────────────────────────────────────────────────────
@@ -102,11 +106,12 @@ async def stream_chat(
             if isinstance(item, str):
                 yield {"type": "token", "data": item}
             elif isinstance(item, RAGResponse):
-                _save_messages(db, session.id, question, item.answer)
+                asst_id = _save_messages(db, session.id, question, item.answer)
                 yield {
                     "type": "done",
                     "data": {
                         "conversation_id": str(session.id),
+                        "assistant_message_id": asst_id,
                         "sources": [
                             {"source_file": s.source_file, "first_page": s.first_page, "excerpt": s.excerpt}
                             for s in item.sources

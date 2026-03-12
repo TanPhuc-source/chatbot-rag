@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     LayoutDashboard, BrainCircuit, Settings, LogOut, X,
-    FolderOpen, ShieldCheck, User as UserIcon, ChevronUp
+    FolderOpen, ShieldCheck, User as UserIcon, ChevronUp,
+    ThumbsUp, BarChart3, HelpCircle, SlidersHorizontal
 } from 'lucide-react';
 
 import logoImage from '../components/images/images.jpg';
@@ -123,13 +124,19 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
                     <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 mb-2 tracking-widest font-sans">Quản lý</p>
                     {/* Ẩn Quản lý tài khoản nếu không phải admin */}
                     {currentUser?.role === 'admin' && (
+                        <SidebarItem icon={BarChart3} label="Thống kê & Báo cáo" path="/admin/analytics" />
+                    )}
+                    {currentUser?.role === 'admin' && (
                         <SidebarItem icon={ShieldCheck} label="Quản lý tài khoản" path="/admin/accounts" />
                     )}
                     <SidebarItem icon={LayoutDashboard} label="Quản lý Chatbot" path="/admin" />
                     <SidebarItem icon={FolderOpen} label="Quản lý hồ sơ tài liệu" path="/admin/records" />
+                    <SidebarItem icon={HelpCircle} label="Quản lý FAQ" path="/admin/faq" />
+                    <SidebarItem icon={ThumbsUp} label="Phản hồi người dùng" path="/admin/feedback" />
+                    
+                    <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot" path="/admin/bot-settings" />
 
                     <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 mb-2 mt-8 tracking-widest font-sans">Hệ thống</p>
-                    <SidebarItem icon={BrainCircuit} label="Cấu hình Model AI" path="/admin/ai-config" />
                     <SidebarItem icon={Settings} label="Cài đặt chung" path="/admin/settings" />
                 </div>
 

@@ -67,6 +67,7 @@ export function useChat() {
                 ...last,
                 sources: data.sources,
                 isStreaming: false,
+                dbId: data.assistant_message_id,
               };
             }
             return { messages: msgs, isStreaming: false };
