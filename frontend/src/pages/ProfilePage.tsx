@@ -111,7 +111,7 @@ export default function ProfilePage() {
         setTimeout(() => setMessage(null), 3000);
     };
 
-    if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500 font-medium">Đang tải dữ liệu...</div>;
+    if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-[#0d0d0d] text-slate-500 dark:text-slate-400 font-medium transition-colors">Đang tải dữ liệu...</div>;
 
     // Xử lý logic hiển thị ảnh mượt mà (chặn lỗi hiển thị sai link)
     const displayName = profile?.full_name || profile?.username || 'User';
@@ -127,22 +127,25 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
+        <div className="flex h-screen bg-slate-50 dark:bg-[#0d0d0d] font-sans text-slate-800 dark:text-slate-200 transition-colors duration-200">
             <Sidebar isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
 
             <div className="flex-1 flex flex-col h-screen overflow-y-auto relative">
                 {/* Header Navbar */}
-                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center px-4 lg:px-8 sticky top-0 z-30">
-                    <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 mr-3 text-slate-600 bg-slate-100 rounded-lg">
+                <header className="h-16 bg-white/80 dark:bg-[#1a1a1a]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center px-4 lg:px-8 sticky top-0 z-30 transition-colors">
+                    <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 mr-3 text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg">
                         <User size={20} />
                     </button>
-                    <h1 className="font-bold text-lg text-slate-800">Hồ sơ cá nhân</h1>
+                    <h1 className="font-bold text-lg text-slate-800 dark:text-white">Hồ sơ cá nhân</h1>
                 </header>
 
                 {/* Thông báo (Toast) góc phải trên */}
                 {message && (
                     <div
-                        className={`fixed top-20 right-8 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border transition-all ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}
+                        className={`fixed top-20 right-8 z-50 p-4 rounded-xl shadow-xl flex items-center gap-3 border transition-all 
+                        ${message.type === 'success'
+                                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                                : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'}`}
                     >
                         {message.type === 'success' ? <CheckCircle size={20} /> : <User size={20} />}
                         <span className="font-medium text-sm">{message.text}</span>
@@ -154,12 +157,12 @@ export default function ProfilePage() {
 
                         {/* CỘT TRÁI: CARD AVATAR & INFO */}
                         <div className="lg:col-span-1">
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
+                            <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden sticky top-24 transition-colors">
                                 <div className="h-28 bg-gradient-to-br from-blue-600 to-indigo-700"></div>
 
                                 <div className="px-6 pb-6 text-center relative">
                                     {/* Khung Avatar */}
-                                    <div className="relative w-36 h-36 mx-auto -mt-18 rounded-full border-4 border-white shadow-lg bg-white group mb-4">
+                                    <div className="relative w-36 h-36 mx-auto -mt-18 rounded-full border-4 border-white dark:border-[#1a1a1a] shadow-lg bg-white dark:bg-[#1a1a1a] group mb-4 transition-colors">
                                         <img
                                             src={getAvatarSrc()}
                                             alt="Avatar"
@@ -168,35 +171,35 @@ export default function ProfilePage() {
 
                                         {/* Hiệu ứng loading khi upload */}
                                         {isUploading && (
-                                            <div className="absolute inset-0 bg-white/70 rounded-full flex items-center justify-center backdrop-blur-sm z-10">
+                                            <div className="absolute inset-0 bg-white/70 dark:bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm z-10 transition-colors">
                                                 <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                                             </div>
                                         )}
 
                                         {/* Nút Upload ẩn hiện khi hover */}
-                                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
+                                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
                                             <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={isUploading} />
                                             <Camera size={28} className="text-white mb-1" />
                                             <span className="text-white text-xs font-bold uppercase tracking-wider">Đổi ảnh</span>
                                         </label>
                                     </div>
 
-                                    <h2 className="text-xl font-bold text-slate-800">{displayName}</h2>
-                                    <p className="text-slate-500 text-sm mb-4">@{profile?.username}</p>
+                                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{displayName}</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">@{profile?.username}</p>
 
-                                    <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-bold border border-blue-100 mb-6">
+                                    <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-800 mb-6 transition-colors">
                                         <Shield size={16} />
                                         {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-2xl p-4 text-left border border-slate-100 space-y-3">
+                                    <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 text-left border border-slate-100 dark:border-slate-700/50 space-y-3 transition-colors">
                                         <div className="flex items-center gap-3 text-sm">
                                             <Mail size={16} className="text-slate-400 shrink-0" />
-                                            <span className="text-slate-600 truncate">{profile?.email}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 truncate">{profile?.email}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <Clock size={16} className="text-slate-400 shrink-0" />
-                                            <span className="text-slate-600">Tham gia: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN') : '---'}</span>
+                                            <span className="text-slate-600 dark:text-slate-300">Tham gia: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN') : '---'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -205,48 +208,48 @@ export default function ProfilePage() {
 
                         {/* CỘT PHẢI: FORM CHỈNH SỬA THÔNG TIN */}
                         <div className="lg:col-span-2">
-                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 sm:p-8">
-                                <div className="mb-6 border-b border-slate-100 pb-4">
-                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 sm:p-8 transition-colors">
+                                <div className="mb-6 border-b border-slate-100 dark:border-slate-800 pb-4">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                         <User className="text-blue-600" size={22} />
                                         Thông tin chi tiết
                                     </h3>
-                                    <p className="text-sm text-slate-500 mt-1">Quản lý và cập nhật thông tin cá nhân của bạn.</p>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Quản lý và cập nhật thông tin cá nhân của bạn.</p>
                                 </div>
 
                                 <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
 
                                     <div className="sm:col-span-2">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Họ và tên</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Họ và tên</label>
                                         <input
                                             type="text" name="full_name" value={profile?.full_name || ''} onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none text-sm"
                                             placeholder="Nhập họ và tên đầy đủ..."
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email liên hệ</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Email liên hệ</label>
                                         <input
                                             type="email" name="email" value={profile?.email || ''} onChange={handleChange} required
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none text-sm"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Số điện thoại</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Số điện thoại</label>
                                         <input
                                             type="tel" name="phone" value={profile?.phone || ''} onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none text-sm"
                                             placeholder="09xx xxx xxx"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Giới tính</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Giới tính</label>
                                         <select
                                             name="gender" value={profile?.gender || ''} onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm cursor-pointer"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none text-sm cursor-pointer"
                                         >
                                             <option value="">Chưa chọn</option>
                                             <option value="Nam">Nam</option>
@@ -256,23 +259,23 @@ export default function ProfilePage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ngày sinh</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Ngày sinh</label>
                                         <input
                                             type="date" name="date_of_birth" value={profile?.date_of_birth || ''} onChange={handleChange}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none text-sm cursor-pointer"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none text-sm cursor-pointer"
                                         />
                                     </div>
 
                                     <div className="sm:col-span-2">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Địa chỉ hiện tại</label>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Địa chỉ hiện tại</label>
                                         <textarea
                                             name="address" value={profile?.address || ''} onChange={handleChange} rows={3}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white transition-all outline-none resize-none text-sm"
+                                            className="w-full px-4 py-2.5 bg-slate-50 dark:bg-[#0d0d0d] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/40 focus:bg-white dark:focus:bg-[#1a1a1a] text-slate-800 dark:text-slate-200 transition-all outline-none resize-none text-sm"
                                             placeholder="Số nhà, Tên đường, Phường/Xã..."
                                         />
                                     </div>
 
-                                    <div className="sm:col-span-2 pt-4 mt-2 border-t border-slate-100 flex justify-end">
+                                    <div className="sm:col-span-2 pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                                         <button
                                             type="submit" disabled={isSaving}
                                             className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 transition-all disabled:opacity-70 active:scale-95 min-w-[160px]"

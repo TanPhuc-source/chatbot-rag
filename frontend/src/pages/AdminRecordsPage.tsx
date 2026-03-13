@@ -70,26 +70,26 @@ const getFileType = (filename: string): DocumentItem['type'] => {
 const FileTypeIcon = ({ type, size = 20 }: { type: DocumentItem['type']; size?: number }) => {
     const icons = {
         pdf: <FileText size={size} className="text-red-500" />,
-        docx: <FileText size={size} className="text-blue-600" />,
-        xlsx: <FileSpreadsheet size={size} className="text-green-600" />,
-        image: <FileIcon size={size} className="text-purple-500" />,
-        other: <FileIcon size={size} className="text-slate-400" />,
+        docx: <FileText size={size} className="text-blue-600 dark:text-blue-400" />,
+        xlsx: <FileSpreadsheet size={size} className="text-green-600 dark:text-green-400" />,
+        image: <FileIcon size={size} className="text-purple-500 dark:text-purple-400" />,
+        other: <FileIcon size={size} className="text-slate-400 dark:text-slate-500" />,
     };
     return icons[type];
 };
 
 const StatusBadge = ({ status }: { status: DocStatus }) => {
     const config: Record<DocStatus, { label: string; className: string }> = {
-        indexed: { label: 'Đã Index', className: 'bg-green-100 text-green-700' },
-        done: { label: 'Đã xử lý', className: 'bg-green-100 text-green-700' },
-        success: { label: 'Đã Index', className: 'bg-green-100 text-green-700' },
-        processing: { label: 'Đang xử lý', className: 'bg-blue-100 text-blue-700' },
-        uploaded: { label: 'Mới tải lên', className: 'bg-amber-100 text-amber-700' },
-        error: { label: 'Lỗi', className: 'bg-red-100 text-red-700' },
+        indexed: { label: 'Đã Index', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+        done: { label: 'Đã xử lý', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+        success: { label: 'Đã Index', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+        processing: { label: 'Đang xử lý', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+        uploaded: { label: 'Mới tải lên', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+        error: { label: 'Lỗi', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
     };
     const { label, className } = config[status] ?? config.uploaded;
     return (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${className}`}>{label}</span>
+        <span className={`px-2 py-0.5 rounded text-[10px] font-bold transition-colors ${className}`}>{label}</span>
     );
 };
 
@@ -287,7 +287,7 @@ export default function AdminRecordsPage() {
             fetch(`http://127.0.0.1:8000/upload/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
-            }).catch(() => {});
+            }).catch(() => { });
 
             setDocuments(prev => prev.filter(d => d.id !== id));
             setSelectedIds(prev => prev.filter(i => i !== id));
@@ -315,7 +315,7 @@ export default function AdminRecordsPage() {
                     fetch(`http://127.0.0.1:8000/upload/${id}`, {
                         method: 'DELETE',
                         headers: { Authorization: `Bearer ${token}` },
-                    }).catch(() => {});
+                    }).catch(() => { });
                     successCount++;
                 }
             } catch { /* continue */ }
@@ -363,7 +363,7 @@ export default function AdminRecordsPage() {
                         <motion.div
                             key={toast.id}
                             initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 30 }}
-                            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[300px] bg-white/95 backdrop-blur-md ${toast.type === 'success' ? 'border-green-200 text-green-700' : toast.type === 'error' ? 'border-red-200 text-red-700' : 'border-blue-200 text-blue-700'}`}
+                            className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border min-w-[300px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-md transition-colors ${toast.type === 'success' ? 'border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400' : toast.type === 'error' ? 'border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400' : 'border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400'}`}
                         >
                             {toast.type === 'success' ? <CheckCircle size={18} /> : toast.type === 'error' ? <XCircle size={18} /> : <Info size={18} />}
                             <span className="text-sm font-medium flex-1">{toast.message}</span>
@@ -377,16 +377,16 @@ export default function AdminRecordsPage() {
                 {confirmDeleteId && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full transition-colors">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2.5 bg-red-100 rounded-xl"><AlertTriangle size={22} className="text-red-600" /></div>
-                                <h3 className="font-bold text-slate-800 text-lg">Xác nhận xóa</h3>
+                                <div className="p-2.5 bg-red-100 dark:bg-red-900/30 rounded-xl"><AlertTriangle size={22} className="text-red-600 dark:text-red-400" /></div>
+                                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Xác nhận xóa</h3>
                             </div>
-                            <p className="text-sm text-slate-500 mb-5">Tài liệu sẽ bị xóa vĩnh viễn khỏi cả <strong>cơ sở dữ liệu</strong> và <strong>ChromaDB</strong>. Không thể hoàn tác.</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Tài liệu sẽ bị xóa vĩnh viễn khỏi cả <strong>cơ sở dữ liệu</strong> và <strong>ChromaDB</strong>. Không thể hoàn tác.</p>
                             <div className="flex gap-3 justify-end">
-                                <button onClick={() => setConfirmDeleteId(null)} className="px-5 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Hủy</button>
+                                <button onClick={() => setConfirmDeleteId(null)} className="px-5 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors">Hủy</button>
                                 <button onClick={() => handleDelete(confirmDeleteId)} disabled={isDeleting}
-                                    className="px-5 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-70 transition-colors flex items-center gap-2">
+                                    className="px-5 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-70 transition-all active:scale-95 flex items-center gap-2">
                                     {isDeleting && <RefreshCw size={14} className="animate-spin" />} Xóa vĩnh viễn
                                 </button>
                             </div>
@@ -400,16 +400,16 @@ export default function AdminRecordsPage() {
                 {confirmDeleteBulk && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full transition-colors">
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2.5 bg-red-100 rounded-xl"><AlertTriangle size={22} className="text-red-600" /></div>
-                                <h3 className="font-bold text-slate-800 text-lg">Xóa {selectedIds.length} tài liệu?</h3>
+                                <div className="p-2.5 bg-red-100 dark:bg-red-900/30 rounded-xl"><AlertTriangle size={22} className="text-red-600 dark:text-red-400" /></div>
+                                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg">Xóa {selectedIds.length} tài liệu?</h3>
                             </div>
-                            <p className="text-sm text-slate-500 mb-5">Tất cả <strong>{selectedIds.length} tài liệu</strong> đã chọn sẽ bị xóa vĩnh viễn khỏi DB và ChromaDB.</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Tất cả <strong>{selectedIds.length} tài liệu</strong> đã chọn sẽ bị xóa vĩnh viễn khỏi DB và ChromaDB.</p>
                             <div className="flex gap-3 justify-end">
-                                <button onClick={() => setConfirmDeleteBulk(false)} className="px-5 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Hủy</button>
+                                <button onClick={() => setConfirmDeleteBulk(false)} className="px-5 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors">Hủy</button>
                                 <button onClick={handleDeleteSelected} disabled={isDeleting}
-                                    className="px-5 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-70 transition-colors flex items-center gap-2">
+                                    className="px-5 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl disabled:opacity-70 transition-all active:scale-95 flex items-center gap-2">
                                     {isDeleting && <RefreshCw size={14} className="animate-spin" />} Xóa tất cả
                                 </button>
                             </div>
@@ -427,18 +427,18 @@ export default function AdminRecordsPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 16 }}
                             transition={{ duration: 0.2 }}
-                            className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+                            className="bg-white dark:bg-slate-800 w-full max-w-3xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden transition-colors"
                         >
                             {/* Header */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shrink-0 transition-colors">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+                                    <div className="p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 transition-colors">
                                         <FileTypeIcon type={previewDoc.type} size={18} />
                                     </div>
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-slate-800 truncate text-sm" title={previewDoc.name}>{previewDoc.name}</h3>
+                                        <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm" title={previewDoc.name}>{previewDoc.name}</h3>
                                         {previewData && (
-                                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5">
                                                 <BookMarked size={11} />
                                                 {previewData.total_chunks} chunks đã index
                                             </p>
@@ -446,7 +446,7 @@ export default function AdminRecordsPage() {
                                     </div>
                                 </div>
                                 <button onClick={() => { setPreviewDoc(null); setPreviewData(null); }}
-                                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-xl transition-colors shrink-0 ml-4">
+                                    className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors shrink-0 ml-4">
                                     <X size={18} />
                                 </button>
                             </div>
@@ -454,25 +454,25 @@ export default function AdminRecordsPage() {
                             {/* Body */}
                             <div className="flex-1 overflow-y-auto p-6">
                                 {isLoadingPreview ? (
-                                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400 dark:text-slate-500">
                                         <RefreshCw size={28} className="animate-spin opacity-40" />
                                         <p className="text-sm">Đang tải nội dung từ ChromaDB...</p>
                                     </div>
                                 ) : !previewData ? (
-                                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                                    <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400 dark:text-slate-500">
                                         <Database size={40} className="opacity-20" />
                                         <p className="text-sm">Không có dữ liệu</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {/* Info bar */}
-                                        <div className="flex items-center gap-3 flex-wrap text-xs text-slate-500 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5">
-                                            <span className="flex items-center gap-1.5 font-medium text-indigo-700">
+                                        <div className="flex items-center gap-3 flex-wrap text-xs text-slate-500 dark:text-slate-400 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-xl px-4 py-2.5 transition-colors">
+                                            <span className="flex items-center gap-1.5 font-medium text-indigo-700 dark:text-indigo-400">
                                                 <Database size={13} /> ChromaDB
                                             </span>
-                                            <span className="text-slate-300">·</span>
+                                            <span className="text-slate-300 dark:text-slate-600">·</span>
                                             <span>{previewData.total_chunks} chunks</span>
-                                            <span className="text-slate-300">·</span>
+                                            <span className="text-slate-300 dark:text-slate-600">·</span>
                                             <span>Hiển thị {CHUNKS_PER_PAGE} chunk / trang</span>
                                         </div>
 
@@ -484,21 +484,21 @@ export default function AdminRecordsPage() {
                                                     key={chunk.chunk_index}
                                                     initial={{ opacity: 0, y: 6 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    className="border border-slate-200 rounded-xl overflow-hidden"
+                                                    className="border border-slate-200 dark:border-slate-700/50 rounded-xl overflow-hidden transition-colors"
                                                 >
-                                                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50 transition-colors">
+                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                                                             <Hash size={12} />
                                                             Chunk {chunk.chunk_index + 1}
                                                         </div>
                                                         {chunk.first_page > 0 && (
-                                                            <span className="text-[10px] text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full transition-colors">
                                                                 Trang {chunk.first_page}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="px-4 py-3">
-                                                        <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap font-mono">
+                                                        <p className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-mono">
                                                             {chunk.text}
                                                         </p>
                                                     </div>
@@ -509,14 +509,14 @@ export default function AdminRecordsPage() {
                                         {Math.ceil(previewData.total_chunks / CHUNKS_PER_PAGE) > 1 && (
                                             <div className="flex items-center justify-center gap-2 pt-2">
                                                 <button onClick={() => setPreviewChunkPage(p => Math.max(p - 1, 1))} disabled={previewChunkPage === 1}
-                                                    className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                                     <ChevronLeft size={16} />
                                                 </button>
-                                                <span className="text-sm text-slate-600 font-medium px-2">
+                                                <span className="text-sm text-slate-600 dark:text-slate-400 font-medium px-2">
                                                     {previewChunkPage} / {Math.ceil(previewData.total_chunks / CHUNKS_PER_PAGE)}
                                                 </span>
                                                 <button onClick={() => setPreviewChunkPage(p => Math.min(p + 1, Math.ceil(previewData.total_chunks / CHUNKS_PER_PAGE)))} disabled={previewChunkPage === Math.ceil(previewData.total_chunks / CHUNKS_PER_PAGE)}
-                                                    className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                                     <ChevronRight size={16} />
                                                 </button>
                                             </div>
@@ -529,21 +529,21 @@ export default function AdminRecordsPage() {
                 )}
             </AnimatePresence>
 
-            <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
+            <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-900 transition-colors">
                 {/* --- HEADER --- */}
-                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 sticky top-0">
+                <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 sticky top-0 transition-colors">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"><Menu size={24} /></button>
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"><Menu size={24} /></button>
                         <div>
-                            <h2 className="text-lg font-bold text-slate-800 hidden lg:block">Hồ sơ Tài liệu</h2>
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 hidden lg:block">Hồ sơ Tài liệu</h2>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={fetchDocuments} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors" title="Làm mới">
+                        <button onClick={fetchDocuments} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Làm mới">
                             <RefreshCw size={18} className={isLoadingDocs ? 'animate-spin' : ''} />
                         </button>
                         <button onClick={() => { localStorage.removeItem('access_token'); navigate('/login'); }}
-                            className="text-sm flex items-center gap-2 text-slate-500 hover:text-red-500 transition-colors font-semibold">
+                            className="text-sm flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-semibold">
                             Đăng xuất <LogOut size={16} />
                         </button>
                     </div>
@@ -555,16 +555,16 @@ export default function AdminRecordsPage() {
                         {/* --- STATS ROW --- */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             {[
-                                { label: 'Tổng tài liệu', value: documents.length, icon: <Database size={20} />, color: 'text-blue-600', bg: 'bg-blue-50' },
-                                { label: 'Đã Index', value: countByStatus('indexed'), icon: <CheckCircle size={20} />, color: 'text-green-600', bg: 'bg-green-50' },
-                                { label: 'Đang xử lý', value: countByStatus('processing'), icon: <RefreshCw size={20} className={documents.some(d => d.status === 'processing') ? 'animate-spin' : ''} />, color: 'text-amber-600', bg: 'bg-amber-50' },
-                                { label: 'Chunks trong DB', value: stats?.total_chunks ?? '—', icon: <Layers size={20} />, color: 'text-purple-600', bg: 'bg-purple-50' },
+                                { label: 'Tổng tài liệu', value: documents.length, icon: <Database size={20} />, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30' },
+                                { label: 'Đã Index', value: countByStatus('indexed'), icon: <CheckCircle size={20} />, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/30' },
+                                { label: 'Đang xử lý', value: countByStatus('processing'), icon: <RefreshCw size={20} className={documents.some(d => d.status === 'processing') ? 'animate-spin' : ''} />, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/30' },
+                                { label: 'Chunks trong DB', value: stats?.total_chunks ?? '—', icon: <Layers size={20} />, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/30' },
                             ].map(({ label, value, icon, color, bg }) => (
-                                <div key={label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-4">
-                                    <div className={`p-2.5 rounded-xl ${bg} ${color}`}>{icon}</div>
+                                <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex items-center gap-4 transition-colors">
+                                    <div className={`p-2.5 rounded-xl ${bg} ${color} transition-colors`}>{icon}</div>
                                     <div>
-                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wide">{label}</p>
-                                        <p className="text-2xl font-bold text-slate-800">{value}</p>
+                                        <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wide">{label}</p>
+                                        <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{value}</p>
                                     </div>
                                 </div>
                             ))}
@@ -574,15 +574,15 @@ export default function AdminRecordsPage() {
                             {/* --- LEFT: UPLOAD --- */}
                             <div className="lg:col-span-4 space-y-4">
                                 {/* Upload Box */}
-                                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                            <Upload size={18} className="text-blue-600" /> Tải tài liệu mới
+                                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+                                    <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
+                                        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                            <Upload size={18} className="text-blue-600 dark:text-blue-400" /> Tải tài liệu mới
                                         </h3>
                                     </div>
                                     <div className="p-5">
                                         <div
-                                            className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50 scale-[1.02]' : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'}`}
+                                            className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                                             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                                             onDragLeave={() => setIsDragging(false)}
                                             onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files); }}
@@ -591,18 +591,18 @@ export default function AdminRecordsPage() {
                                             <input ref={fileInputRef} type="file" className="hidden" multiple
                                                 accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.pptx,.jpg,.jpeg,.png"
                                                 onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); if (fileInputRef.current) fileInputRef.current.value = ''; }} />
-                                            <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4 shadow-sm transition-colors">
                                                 <Upload size={26} strokeWidth={2} />
                                             </div>
-                                            <p className="text-sm font-bold text-slate-700">Click hoặc Kéo thả file</p>
-                                            <p className="text-xs text-slate-400 mt-2">PDF, DOCX, Excel, TXT, PPTX, Ảnh</p>
-                                            <p className="text-[10px] text-slate-300 mt-1">Tối đa 50MB / file</p>
+                                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Click hoặc Kéo thả file</p>
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">PDF, DOCX, Excel, TXT, PPTX, Ảnh</p>
+                                            <p className="text-[10px] text-slate-300 dark:text-slate-600 mt-1">Tối đa 50MB / file</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* AI Pipeline info */}
-                                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl shadow-lg shadow-indigo-200 text-white p-6 relative overflow-hidden">
+                                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 dark:from-indigo-900 dark:to-purple-900 rounded-3xl shadow-lg shadow-indigo-200 dark:shadow-none text-white p-6 relative overflow-hidden transition-colors">
                                     <BrainCircuit className="absolute -bottom-4 -right-4 text-white opacity-10" size={120} />
                                     <h4 className="font-bold text-lg mb-1 flex items-center gap-2">
                                         <Database size={18} className="text-indigo-200" /> Pipeline RAG
@@ -623,12 +623,12 @@ export default function AdminRecordsPage() {
                             </div>
 
                             {/* --- RIGHT: FILE LIST --- */}
-                            <div className="lg:col-span-8 bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col overflow-hidden min-h-[500px]">
+                            <div className="lg:col-span-8 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden min-h-[500px] transition-colors">
                                 {/* Toolbar */}
-                                <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white sticky top-0 z-10">
+                                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white dark:bg-slate-800 sticky top-0 z-10 transition-colors">
                                     <div className="flex items-center gap-3 flex-wrap">
-                                        <h3 className="font-bold text-slate-800">Kho tài liệu</h3>
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                                        <h3 className="font-bold text-slate-800 dark:text-slate-100">Kho tài liệu</h3>
+                                        <span className="text-xs text-slate-400 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full font-medium transition-colors">
                                             {filteredDocs.length} file
                                         </span>
                                         <AnimatePresence>
@@ -637,7 +637,7 @@ export default function AdminRecordsPage() {
                                                     initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.85, opacity: 0 }}
                                                     onClick={() => setConfirmDeleteBulk(true)}
                                                     disabled={isDeleting}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 text-xs font-bold rounded-lg transition-colors"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/50 text-xs font-bold rounded-lg transition-colors"
                                                 >
                                                     <Trash2 size={14} /> Xóa ({selectedIds.length})
                                                 </motion.button>
@@ -651,17 +651,17 @@ export default function AdminRecordsPage() {
                                             placeholder="Tìm kiếm tài liệu..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-blue-400 bg-slate-50 focus:bg-white font-medium"
+                                            className="w-full pl-9 pr-4 py-2 text-xs border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-blue-400 dark:focus:border-blue-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 font-medium transition-colors"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Table header */}
                                 {!isLoadingDocs && filteredDocs.length > 0 && (
-                                    <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center gap-3 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                                    <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/50 flex items-center gap-3 text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider transition-colors">
                                         <div className="w-8 flex justify-center">
                                             <input type="checkbox" checked={isAllCurrentSelected} onChange={handleSelectAll}
-                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer" />
+                                                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 cursor-pointer" />
                                         </div>
                                         <span className="w-10 shrink-0">Loại</span>
                                         <span className="flex-1">Tên tài liệu</span>
@@ -674,15 +674,15 @@ export default function AdminRecordsPage() {
                                 {/* List */}
                                 <div className="flex-1 overflow-y-auto">
                                     {isLoadingDocs ? (
-                                        <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 py-20">
+                                        <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 dark:text-slate-500 py-20">
                                             <RefreshCw size={28} className="animate-spin opacity-40" />
                                             <p className="text-sm">Đang tải danh sách...</p>
                                         </div>
                                     ) : filteredDocs.length === 0 ? (
-                                        <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 py-20">
+                                        <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 dark:text-slate-500 py-20">
                                             <Database size={48} className="opacity-20" />
                                             <p className="text-sm font-medium">{searchTerm ? 'Không tìm thấy tài liệu phù hợp' : 'Chưa có tài liệu nào'}</p>
-                                            {!searchTerm && <p className="text-xs text-slate-300">Kéo thả hoặc chọn file để bắt đầu</p>}
+                                            {!searchTerm && <p className="text-xs text-slate-300 dark:text-slate-600">Kéo thả hoặc chọn file để bắt đầu</p>}
                                         </div>
                                     ) : (
                                         <AnimatePresence>
@@ -693,7 +693,7 @@ export default function AdminRecordsPage() {
                                                     animate={{ opacity: 1, y: 0 }}
                                                     exit={{ opacity: 0, x: -20 }}
                                                     transition={{ delay: idx * 0.03 }}
-                                                    className={`flex items-center gap-3 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors group ${selectedIds.includes(doc.id) ? 'bg-blue-50/60' : ''}`}
+                                                    className={`flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group ${selectedIds.includes(doc.id) ? 'bg-blue-50/60 dark:bg-blue-900/20' : ''}`}
                                                 >
                                                     {/* Checkbox */}
                                                     <div className="w-8 flex justify-center shrink-0">
@@ -702,22 +702,22 @@ export default function AdminRecordsPage() {
                                                             onChange={() => setSelectedIds(prev =>
                                                                 prev.includes(doc.id) ? prev.filter(i => i !== doc.id) : [...prev, doc.id]
                                                             )}
-                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer"
+                                                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 cursor-pointer"
                                                         />
                                                     </div>
 
                                                     {/* Icon */}
-                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-50 border border-slate-100 shrink-0">
+                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-slate-700 border border-slate-100 dark:border-slate-600 shrink-0 transition-colors">
                                                         <FileTypeIcon type={doc.type} />
                                                     </div>
 
                                                     {/* Name & progress */}
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-semibold text-slate-700 truncate" title={doc.name}>{doc.name}</p>
+                                                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate" title={doc.name}>{doc.name}</p>
                                                         {doc.status === 'processing' && typeof doc.uploadProgress === 'number' && (
-                                                            <div className="mt-1.5 w-full bg-slate-200 rounded-full h-1">
+                                                            <div className="mt-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1">
                                                                 <motion.div
-                                                                    className="bg-blue-500 h-1 rounded-full"
+                                                                    className="bg-blue-500 dark:bg-blue-400 h-1 rounded-full"
                                                                     initial={{ width: 0 }}
                                                                     animate={{ width: `${doc.uploadProgress}%` }}
                                                                 />
@@ -731,7 +731,7 @@ export default function AdminRecordsPage() {
                                                     </div>
 
                                                     {/* Date */}
-                                                    <div className="hidden md:flex items-center gap-1.5 w-36 text-xs text-slate-400 shrink-0">
+                                                    <div className="hidden md:flex items-center gap-1.5 w-36 text-xs text-slate-400 dark:text-slate-500 shrink-0">
                                                         <Clock size={12} className="shrink-0" />
                                                         <span className="truncate">{doc.uploadedAt}</span>
                                                     </div>
@@ -740,14 +740,14 @@ export default function AdminRecordsPage() {
                                                     <div className="w-16 flex justify-center gap-1 shrink-0">
                                                         <button
                                                             onClick={() => openPreview(doc)}
-                                                            className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                             title="Xem nội dung"
                                                         >
                                                             <Eye size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => setConfirmDeleteId(doc.id)}
-                                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                             title="Xóa tài liệu"
                                                         >
                                                             <Trash2 size={16} />
@@ -761,31 +761,31 @@ export default function AdminRecordsPage() {
 
                                 {/* Pagination */}
                                 {totalPages > 1 && (
-                                    <div className="p-4 border-t border-slate-100 flex justify-center items-center gap-2">
+                                    <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 flex justify-center items-center gap-2 transition-colors">
                                         <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
-                                            className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                             <ChevronsLeft size={16} />
                                         </button>
                                         <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
-                                            className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                             <ChevronLeft size={16} />
                                         </button>
-                                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border">
-                                            <span className="text-xs text-slate-500 font-medium">Trang</span>
+                                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors">
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Trang</span>
                                             <input type="number" min={1} max={totalPages} value={pageInput}
                                                 onChange={(e) => setPageInput(e.target.value)}
                                                 onBlur={() => { const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p); else setPageInput(currentPage.toString()); }}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') { const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p); } }}
-                                                className="w-10 text-center bg-slate-50 border rounded text-sm font-bold h-7"
+                                                className="w-10 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-sm font-bold text-slate-800 dark:text-slate-100 h-7 transition-colors"
                                             />
-                                            <span className="text-xs text-slate-500 font-medium">/ {totalPages}</span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ {totalPages}</span>
                                         </div>
                                         <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-                                            className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                             <ChevronRight size={16} />
                                         </button>
                                         <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
-                                            className="p-1.5 rounded-lg border bg-white disabled:opacity-40 hover:bg-slate-50 transition-colors">
+                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                             <ChevronsRight size={16} />
                                         </button>
                                     </div>
