@@ -55,9 +55,17 @@ class Settings(BaseSettings):
     ENABLE_CONTEXTUAL_HEADERS: bool = True
     CONTEXTUAL_HEADERS_MAX_CHUNKS: int = 200  # giới hạn chunk được enrich/file
 
+    # ── Image OCR & Table Extraction ──────────────────────────
+    ENABLE_IMAGE_OCR: bool = True            # Bật OCR cho file ảnh
+    ENABLE_TABLE_EXTRACTION: bool = True     # Bật extract bảng từ ảnh
+    OCR_USE_AI_FALLBACK: bool = True         # Dùng AI Vision khi line detection thất bại
+    GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    ANTHROPIC_API_KEY: str = ""              # Để trống nếu không dùng Anthropic fallback
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"                     # Bỏ qua field lạ trong .env
 
 
 @lru_cache()
