@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios, { AxiosError } from 'axios';
@@ -10,7 +9,6 @@ import {
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Filter, Menu, MapPin, Phone, User
 } from 'lucide-react';
-//import Sidebar from '@/pages/SidebarPage';
 
 // --- TYPES KHỚP VỚI BACKEND (ĐÃ BỔ SUNG CÁC TRƯỜNG MỚI) ---
 interface UserData {
@@ -20,7 +18,6 @@ interface UserData {
     role: string;
     is_active: boolean;
     created_at: string;
-    // Các trường dưới đây cần Backend (models.py, schemas.py) bổ sung thêm
     full_name?: string;
     gender?: string;
     date_of_birth?: string;
@@ -32,13 +29,12 @@ interface UserData {
 export default function AccountManagementPage() {
     // --- AUTH & SIDEBAR STATE ---
     const token = localStorage.getItem('access_token');
-    // const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [currentUsername, setCurrentUsername] = useState<string | null>(null);
-    // Lấy state điều khiển menu từ AdminLayout truyền xuống
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
         setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
     }>();
+
     // --- DATA STATE ---
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,11 +59,10 @@ export default function AccountManagementPage() {
         headers: { Authorization: `Bearer ${token}` }
     });
 
-    // --- FETCH DATA & LẤY THÔNG TIN USER ĐANG ĐĂNG NHẬP ---
+    // --- FETCH DATA ---
     useEffect(() => {
         if (token) {
             fetchData();
-            // Giải mã JWT Token thủ công để lấy username hiện tại (trong payload 'sub')
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 setCurrentUsername(payload.sub);
@@ -103,7 +98,6 @@ export default function AccountManagementPage() {
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
     const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-    // --- HANDLERS ---
     const paginate = (page: number) => { if (page >= 1 && page <= totalPages) setCurrentPage(page); };
     const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setPageInput(e.target.value);
     const handlePageInputSubmit = () => {
@@ -138,7 +132,6 @@ export default function AccountManagementPage() {
         const formData = new FormData(e.currentTarget);
         const payload: any = {};
 
-        // Chỉ gửi trường có giá trị (partial update)
         const fields = ['email', 'full_name', 'gender', 'date_of_birth', 'phone', 'address', 'role'];
         fields.forEach(field => {
             const val = (formData.get(field) as string || '').trim();
@@ -147,18 +140,15 @@ export default function AccountManagementPage() {
 
         try {
             if (editingUser) {
-                // UPDATE
                 await api.patch(`/admin/users/${editingUser.id}`, payload);
                 alert("✅ Cập nhật thông tin tài khoản thành công!");
             } else {
-                // CREATE
                 const createPayload: any = {
                     username: formData.get('username') as string,
                     email: formData.get('email') as string,
                     password: formData.get('password') as string,
                     role: formData.get('role') as string | 'user',
                 };
-                // thêm các trường optional
                 ['full_name', 'gender', 'date_of_birth', 'phone', 'address'].forEach(field => {
                     const val = (formData.get(field) as string || '').trim();
                     if (val) createPayload[field] = val;
@@ -182,62 +172,54 @@ export default function AccountManagementPage() {
     // --- RENDER HELPERS ---
     const StatusBadge = ({ isActive }: { isActive?: boolean }) => (
         isActive ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-bold border border-emerald-100">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-800/50 transition-colors">
                 <CheckCircle size={12} /> Hoạt động
             </span>
         ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-bold border border-rose-100">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-bold border border-rose-100 dark:border-rose-800/50 transition-colors">
                 <UserX size={12} /> Đã khóa
             </span>
         )
     );
 
     const RoleBadge = ({ roleName }: { roleName?: string }) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${roleName === 'admin'
-            ? 'bg-blue-100 text-blue-700 border border-blue-200'
-            : 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold transition-colors ${roleName === 'admin'
+            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50'
+            : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50'
             }`}>
             {roleName === 'admin' ? 'Admin' : 'User'}
         </span>
     );
 
     return (
-        // <div className="flex h-screen bg-slate-50 font-sans text-slate-700 overflow-hidden relative">
-        //     {/* SIDEBAR */}
-        //     <Sidebar
-        //         isMobileOpen={isMobileMenuOpen}
-        //         setIsMobileOpen={setIsMobileMenuOpen}
-        //     //user={{ fullName: 'Quản trị viên', email: 'admin@dthu.edu.vn', role: 'admin' }}
-        //     />
-
-        //     {/* MAIN LAYOUT */}
-        //     <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <> <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 sticky top-0">
-            <div className="flex items-center gap-3">
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-                    <Menu size={24} />
-                </button>
-                <span className="font-bold text-lg text-slate-800 tracking-tight hidden sm:block">Quản lý tài khoản</span>
-            </div>
-        </header>
+        <>
+            <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 sticky top-0 transition-colors">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+                        <Menu size={24} />
+                    </button>
+                    <span className="font-bold text-lg text-slate-800 dark:text-slate-100 tracking-tight hidden sm:block">Quản lý tài khoản</span>
+                </div>
+            </header>
 
             <div className="flex-1 px-4 lg:px-8 pt-6 pb-4 overflow-y-auto">
-                <div className="bg-white p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                {/* TOOLBAR */}
+                <div className="bg-white dark:bg-slate-800 p-3 md:p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-6 transition-colors">
                     <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-500/40 text-sm text-slate-800 dark:text-slate-100 transition-colors"
                                 placeholder="Tìm họ tên, tên đăng nhập, email..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="hidden md:flex items-center px-4 py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 whitespace-nowrap">
-                                <span className="mr-2">Tổng:</span><span className="text-blue-600">{filteredUsers.length}</span>
+                            <div className="hidden md:flex items-center px-4 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 text-sm font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap transition-colors">
+                                <span className="mr-2">Tổng:</span><span className="text-blue-600 dark:text-blue-400">{filteredUsers.length}</span>
                             </div>
-                            <button onClick={() => { setEditingUser(null); setIsUpsertModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95">
+                            <button onClick={() => { setEditingUser(null); setIsUpsertModalOpen(true); }} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95">
                                 <Plus size={20} /><span>Thêm tài khoản</span>
                             </button>
                         </div>
@@ -245,10 +227,10 @@ export default function AccountManagementPage() {
                 </div>
 
                 {/* DESKTOP TABLE */}
-                <div className="hidden xl:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto min-h-[400px]">
+                <div className="hidden xl:block bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-x-auto min-h-[400px] transition-colors">
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">
                                 <th className="px-4 py-4">ID</th>
                                 <th className="px-6 py-4">Họ và tên</th>
                                 <th className="px-6 py-4">Giới tính</th>
@@ -259,33 +241,32 @@ export default function AccountManagementPage() {
                                 <th className="px-6 py-4 text-right">Hành động</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                             {isLoading ? (
                                 <tr><td colSpan={8} className="p-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
                             ) : filteredUsers.length === 0 ? (
                                 <tr><td colSpan={8} className="p-8 text-center text-slate-400">Không tìm thấy tài khoản.</td></tr>
                             ) : (
                                 paginatedUsers.map((u) => (
-                                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-4 py-4 text-sm text-slate-500">{u.id}</td>
+                                    <tr key={u.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-colors">
+                                        <td className="px-4 py-4 text-sm text-slate-500 dark:text-slate-400">{u.id}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-800">{u.full_name || 'Chưa cập nhật'}</span>
-                                                <span className="text-xs text-slate-500">@{u.username}</span>
+                                                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{u.full_name || 'Chưa cập nhật'}</span>
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{u.gender || '---'}</td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{u.date_of_birth || '---'}</td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{u.email}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{u.gender || '---'}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{u.date_of_birth || '---'}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">{u.email}</td>
                                         <td className="px-6 py-4"><RoleBadge roleName={u.role} /></td>
                                         <td className="px-6 py-4"><StatusBadge isActive={u.is_active} /></td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => { setViewingUser(u); setIsViewModalOpen(true); }} className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100" title="Chi tiết"><Eye size={16} /></button>
-                                                <button onClick={() => { setEditingUser(u); setIsUpsertModalOpen(true); }} className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100" title="Đổi quyền"><Edit size={16} /></button>
-                                                {/* Ẩn nút khóa nếu là chính tài khoản đang đăng nhập */}
+                                                <button onClick={() => { setViewingUser(u); setIsViewModalOpen(true); }} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors" title="Chi tiết"><Eye size={16} /></button>
+                                                <button onClick={() => { setEditingUser(u); setIsUpsertModalOpen(true); }} className="p-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors" title="Đổi quyền"><Edit size={16} /></button>
                                                 {u.username !== currentUsername && (
-                                                    <button onClick={() => handleToggleStatus(u)} className={`p-2 rounded-lg ${u.is_active ? 'bg-rose-50 text-rose-600 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`} title={u.is_active ? "Khóa tài khoản" : "Mở khóa tài khoản"}>
+                                                    <button onClick={() => handleToggleStatus(u)} className={`p-2 rounded-lg transition-colors ${u.is_active ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'}`} title={u.is_active ? "Khóa tài khoản" : "Mở khóa tài khoản"}>
                                                         {u.is_active ? <Lock size={16} /> : <Unlock size={16} />}
                                                     </button>
                                                 )}
@@ -302,31 +283,31 @@ export default function AccountManagementPage() {
                 {totalPages > 1 && (
                     <div className="hidden xl:flex mt-5 justify-center items-center gap-3">
                         <div className="flex items-center gap-1">
-                            <button onClick={() => paginate(1)} disabled={currentPage === 1} className="p-2 rounded-lg border bg-white disabled:opacity-50"><ChevronsLeft size={18} /></button>
-                            <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border bg-white disabled:opacity-50"><ChevronLeft size={18} /></button>
+                            <button onClick={() => paginate(1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-50 transition-colors"><ChevronsLeft size={18} /></button>
+                            <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-50 transition-colors"><ChevronLeft size={18} /></button>
                         </div>
-                        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border">
-                            <span className="text-xs text-slate-500 font-medium">Trang</span>
-                            <input type="number" min={1} max={totalPages} value={pageInput} onChange={handlePageInputChange} onBlur={handlePageInputSubmit} onKeyDown={handleKeyDown} className="w-10 text-center bg-slate-50 border rounded text-sm font-bold h-7" />
-                            <span className="text-xs text-slate-500 font-medium">/ {totalPages}</span>
+                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Trang</span>
+                            <input type="number" min={1} max={totalPages} value={pageInput} onChange={handlePageInputChange} onBlur={handlePageInputSubmit} onKeyDown={handleKeyDown} className="w-10 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-sm font-bold text-slate-800 dark:text-slate-100 h-7 transition-colors" />
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ {totalPages}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border bg-white disabled:opacity-50"><ChevronRight size={18} /></button>
-                            <button onClick={() => paginate(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-lg border bg-white disabled:opacity-50"><ChevronsRight size={18} /></button>
+                            <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-50 transition-colors"><ChevronRight size={18} /></button>
+                            <button onClick={() => paginate(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-50 transition-colors"><ChevronsRight size={18} /></button>
                         </div>
                     </div>
                 )}
 
-                {/* --- MODAL 1: VIEW DETAILS (KHÔNG THAY ĐỔI) --- */}
+                {/* --- MODAL 1: VIEW DETAILS --- */}
                 <AnimatePresence>
                     {isViewModalOpen && viewingUser && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative overflow-hidden">
+                            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl relative overflow-hidden transition-colors">
                                 <div className="h-24 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
                                 <button onClick={() => setIsViewModalOpen(false)} className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/20 p-1.5 rounded-full backdrop-blur-sm"><X size={18} /></button>
 
                                 <div className="px-6 pb-6 relative">
-                                    <div className="w-24 h-24 mx-auto -mt-12 bg-white rounded-full p-1.5 shadow-lg relative z-10 mb-4">
+                                    <div className="w-24 h-24 mx-auto -mt-12 bg-white dark:bg-slate-800 rounded-full p-1.5 shadow-lg relative z-10 mb-4 transition-colors">
                                         <img
                                             src={
                                                 viewingUser.avatar_url
@@ -339,39 +320,39 @@ export default function AccountManagementPage() {
                                     </div>
 
                                     <div className="text-center mb-6">
-                                        <h3 className="text-xl font-bold text-slate-800">{viewingUser.full_name || 'Chưa cập nhật tên'}</h3>
-                                        <p className="text-slate-500 text-sm mb-3">@{viewingUser.username}</p>
+                                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{viewingUser.full_name || 'Chưa cập nhật tên'}</h3>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-3">@{viewingUser.username}</p>
                                         <div className="flex justify-center gap-2">
                                             <RoleBadge roleName={viewingUser.role} />
                                             <StatusBadge isActive={viewingUser.is_active} />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <div className="space-y-3 bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 transition-colors">
                                         <div className="flex items-center gap-3 text-sm">
                                             <Mail size={16} className="text-slate-400" />
-                                            <span className="text-slate-600 flex-1">Email:</span>
-                                            <span className="font-medium text-slate-800">{viewingUser.email}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 flex-1">Email:</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-100">{viewingUser.email}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <User size={16} className="text-slate-400" />
-                                            <span className="text-slate-600 flex-1">Giới tính:</span>
-                                            <span className="font-medium text-slate-800">{viewingUser.gender || 'Chưa cập nhật'}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 flex-1">Giới tính:</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-100">{viewingUser.gender || 'Chưa cập nhật'}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <Calendar size={16} className="text-slate-400" />
-                                            <span className="text-slate-600 flex-1">Ngày sinh:</span>
-                                            <span className="font-medium text-slate-800">{viewingUser.date_of_birth || 'Chưa cập nhật'}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 flex-1">Ngày sinh:</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-100">{viewingUser.date_of_birth || 'Chưa cập nhật'}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <Phone size={16} className="text-slate-400" />
-                                            <span className="text-slate-600 flex-1">Số điện thoại:</span>
-                                            <span className="font-medium text-slate-800">{viewingUser.phone || 'Chưa cập nhật'}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 flex-1">Số điện thoại:</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-100">{viewingUser.phone || 'Chưa cập nhật'}</span>
                                         </div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <MapPin size={16} className="text-slate-400 shrink-0" />
-                                            <span className="text-slate-600 flex-1 shrink-0">Địa chỉ:</span>
-                                            <span className="font-medium text-slate-800 text-right truncate" title={viewingUser.address || 'Chưa cập nhật'}>{viewingUser.address || 'Chưa cập nhật'}</span>
+                                            <span className="text-slate-600 dark:text-slate-300 flex-1 shrink-0">Địa chỉ:</span>
+                                            <span className="font-medium text-slate-800 dark:text-slate-100 text-right truncate" title={viewingUser.address || 'Chưa cập nhật'}>{viewingUser.address || 'Chưa cập nhật'}</span>
                                         </div>
                                     </div>
 
@@ -384,7 +365,7 @@ export default function AccountManagementPage() {
                     )}
                 </AnimatePresence>
 
-                {/* --- MODAL 2: UPSERT USER (CHỈ FORM, TO RỘNG, CHIA KHU VỰC) --- */}
+                {/* --- MODAL 2: UPSERT USER --- */}
                 <AnimatePresence>
                     {isUpsertModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
@@ -393,40 +374,39 @@ export default function AccountManagementPage() {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
                                 transition={{ duration: 0.2 }}
-                                className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl my-8 relative flex flex-col max-h-[90vh]"
+                                className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl my-8 relative flex flex-col max-h-[90vh] transition-colors"
                             >
                                 <form onSubmit={handleUpsertSubmit} className="flex flex-col h-full overflow-hidden rounded-2xl">
                                     {/* HEADER */}
-                                    <div className="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center shrink-0">
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0 transition-colors">
                                         <div>
-                                            <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                                            <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                                 {editingUser ? <Edit className="text-amber-500" size={24} /> : <Plus className="text-blue-600" size={24} />}
                                                 {editingUser ? 'Cập nhật thông tin tài khoản' : 'Tạo tài khoản mới'}
                                             </h3>
-                                            <p className="text-sm text-slate-500 mt-1">
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                                                 {editingUser ? 'Chỉnh sửa các thông tin cần thiết bên dưới.' : 'Điền đầy đủ thông tin để cấp quyền truy cập cho người dùng mới.'}
                                             </p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => { setIsUpsertModalOpen(false); setEditingUser(null); }}
-                                            className="text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-200 p-2 rounded-xl transition-colors border border-slate-200 shadow-sm"
+                                            className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-2 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 shadow-sm"
                                         >
                                             <X size={20} />
                                         </button>
                                     </div>
 
-                                    {/* BODY FORM (Cuộn được nếu màn hình nhỏ) */}
-                                    <div className="p-8 overflow-y-auto flex-1 bg-white">
-
+                                    {/* BODY FORM */}
+                                    <div className="p-8 overflow-y-auto flex-1 bg-white dark:bg-slate-800 transition-colors">
                                         {/* --- PHẦN 1: THÔNG TIN HỆ THỐNG --- */}
                                         <div className="mb-8">
-                                            <h4 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                                            <h4 className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
                                                 <Shield size={16} /> Thông tin truy cập hệ thống
                                             </h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">TÊN ĐĂNG NHẬP <span className="text-rose-500">*</span></label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">TÊN ĐĂNG NHẬP <span className="text-rose-500">*</span></label>
                                                     <div className="relative">
                                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                                         <input
@@ -435,13 +415,13 @@ export default function AccountManagementPage() {
                                                             required
                                                             disabled={!!editingUser}
                                                             placeholder="ví dụ: admin01"
-                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm disabled:bg-slate-100 disabled:text-slate-500 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 dark:disabled:text-slate-500 focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">ĐỊA CHỈ EMAIL <span className="text-rose-500">*</span></label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">ĐỊA CHỈ EMAIL <span className="text-rose-500">*</span></label>
                                                     <div className="relative">
                                                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                                         <input
@@ -450,14 +430,14 @@ export default function AccountManagementPage() {
                                                             defaultValue={editingUser?.email}
                                                             required
                                                             placeholder="email@domain.com"
-                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 {!editingUser && (
                                                     <div>
-                                                        <label className="block text-xs font-bold text-slate-600 mb-2">MẬT KHẨU <span className="text-rose-500">*</span></label>
+                                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">MẬT KHẨU <span className="text-rose-500">*</span></label>
                                                         <div className="relative">
                                                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                                             <input
@@ -466,18 +446,18 @@ export default function AccountManagementPage() {
                                                                 required
                                                                 minLength={6}
                                                                 placeholder="Tối thiểu 6 ký tự"
-                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                                             />
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">VAI TRÒ (QUYỀN) <span className="text-rose-500">*</span></label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">VAI TRÒ (QUYỀN) <span className="text-rose-500">*</span></label>
                                                     <select
                                                         name="role"
                                                         defaultValue={editingUser?.role || 'user'}
-                                                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer transition-all"
+                                                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none cursor-pointer transition-all"
                                                     >
                                                         <option value="admin">Admin (Quản trị viên)</option>
                                                         <option value="user">User (Người dùng cơ bản)</option>
@@ -488,40 +468,40 @@ export default function AccountManagementPage() {
 
                                         {/* --- PHẦN 2: THÔNG TIN CÁ NHÂN --- */}
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2 border-b pb-2">
+                                            <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2">
                                                 <User size={16} /> Thông tin cá nhân liên hệ
                                             </h4>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">HỌ VÀ TÊN</label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">HỌ VÀ TÊN</label>
                                                     <input
                                                         name="full_name"
                                                         defaultValue={editingUser?.full_name || ''}
                                                         placeholder="Nhập đầy đủ họ và tên"
-                                                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                        className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                                     />
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">SỐ ĐIỆN THOẠI</label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">SỐ ĐIỆN THOẠI</label>
                                                     <div className="relative">
                                                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                                         <input
                                                             name="phone"
                                                             defaultValue={editingUser?.phone || ''}
                                                             placeholder="09xx xxx xxx"
-                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none transition-all"
+                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="block text-xs font-bold text-slate-600 mb-2">GIỚI TÍNH</label>
+                                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">GIỚI TÍNH</label>
                                                         <select
                                                             name="gender"
                                                             defaultValue={editingUser?.gender || ''}
-                                                            className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer"
+                                                            className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none cursor-pointer"
                                                         >
                                                             <option value="">Chưa chọn</option>
                                                             <option value="Nam">Nam</option>
@@ -530,20 +510,20 @@ export default function AccountManagementPage() {
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-xs font-bold text-slate-600 mb-2">NGÀY SINH</label>
+                                                        <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">NGÀY SINH</label>
                                                         <div className="relative">
                                                             <input
                                                                 type="date"
                                                                 name="date_of_birth"
                                                                 defaultValue={editingUser?.date_of_birth || ''}
-                                                                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none cursor-pointer"
+                                                                className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none cursor-pointer"
                                                             />
                                                         </div>
                                                     </div>
                                                 </div>
 
                                                 <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-600 mb-2">ĐỊA CHỈ LIÊN HỆ</label>
+                                                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-2">ĐỊA CHỈ LIÊN HỆ</label>
                                                     <div className="relative">
                                                         <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
                                                         <textarea
@@ -551,7 +531,7 @@ export default function AccountManagementPage() {
                                                             defaultValue={editingUser?.address || ''}
                                                             rows={3}
                                                             placeholder="Nhập địa chỉ chi tiết (Số nhà, Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố)"
-                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none resize-none transition-all"
+                                                            className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 dark:focus:ring-blue-500/50 focus:border-blue-500 outline-none resize-none transition-all"
                                                         />
                                                     </div>
                                                 </div>
@@ -561,18 +541,18 @@ export default function AccountManagementPage() {
                                     </div>
 
                                     {/* FOOTER */}
-                                    <div className="bg-slate-50 px-8 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 px-8 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 shrink-0 transition-colors">
                                         <button
                                             type="button"
                                             onClick={() => { setIsUpsertModalOpen(false); setEditingUser(null); }}
-                                            className="px-6 py-2.5 text-sm font-semibold text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors"
+                                            className="px-6 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl transition-colors"
                                         >
                                             Hủy bỏ
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-70 shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center gap-2"
+                                            className="px-8 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-70 shadow-lg shadow-blue-500/30 dark:shadow-none transition-all active:scale-95 flex items-center gap-2"
                                         >
                                             {isSubmitting ? (
                                                 <span className="flex items-center gap-2">
@@ -589,9 +569,6 @@ export default function AccountManagementPage() {
                     )}
                 </AnimatePresence>
             </div>
-            {/* </div >
-        </div > */}
         </>
     );
-
 }
