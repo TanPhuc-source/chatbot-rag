@@ -5,7 +5,7 @@ import {
     Upload, FileText, FileSpreadsheet, File as FileIcon,
     Trash2, CheckCircle, RefreshCw, AlertCircle, Database,
     BrainCircuit, Search, Menu, X, XCircle,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+    ChevronLeft, ChevronRight,
     LogOut, Layers, Clock, AlertTriangle, Info,
     Eye, BookOpen, Hash, BookMarked
 } from 'lucide-react';
@@ -127,8 +127,7 @@ export default function AdminRecordsPage() {
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
-    const [pageInput, setPageInput] = useState('1');
-    const itemsPerPage = 8;
+    const itemsPerPage = 5;
 
     // --- Auth guard ---
     useEffect(() => {
@@ -205,8 +204,7 @@ export default function AdminRecordsPage() {
     }, [token, addToast]);
 
     // --- Pagination sync ---
-    useEffect(() => { setCurrentPage(1); setPageInput('1'); }, [searchTerm]);
-    useEffect(() => { setPageInput(currentPage.toString()); }, [currentPage]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
     // --- Upload ---
     const uploadFile = async (file: File): Promise<void> => {
@@ -351,6 +349,20 @@ export default function AdminRecordsPage() {
     const countByStatus = (s: DocStatus) => documents.filter(d =>
         d.status === s || (s === 'indexed' && (d.status === 'done' || d.status === 'success' as any))
     ).length;
+
+    // Smart pagination helper
+    const renderDocPages = () => {
+        const pages: (number | '...')[] = [];
+        if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+        else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
 
     if (!token) return null;
 
@@ -685,14 +697,17 @@ export default function AdminRecordsPage() {
                                             {!searchTerm && <p className="text-xs text-slate-300 dark:text-slate-600">Kéo thả hoặc chọn file để bắt đầu</p>}
                                         </div>
                                     ) : (
-                                        <AnimatePresence>
+                                        <AnimatePresence mode="wait">
+                                            <motion.div
+                                                key={currentPage}
+                                                initial={{ opacity: 0, y: 6 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -6 }}
+                                                transition={{ duration: 0.15 }}
+                                            >
                                             {currentDocs.map((doc, idx) => (
-                                                <motion.div
+                                                <div
                                                     key={doc.id}
-                                                    initial={{ opacity: 0, y: 8 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    exit={{ opacity: 0, x: -20 }}
-                                                    transition={{ delay: idx * 0.03 }}
                                                     className={`flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group ${selectedIds.includes(doc.id) ? 'bg-blue-50/60 dark:bg-blue-900/20' : ''}`}
                                                 >
                                                     {/* Checkbox */}
@@ -753,41 +768,44 @@ export default function AdminRecordsPage() {
                                                             <Trash2 size={16} />
                                                         </button>
                                                     </div>
-                                                </motion.div>
+                                                </div>
                                             ))}
+                                            </motion.div>
                                         </AnimatePresence>
                                     )}
                                 </div>
 
                                 {/* Pagination */}
-                                {totalPages > 1 && (
-                                    <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 flex justify-center items-center gap-2 transition-colors">
-                                        <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1}
-                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                            <ChevronsLeft size={16} />
-                                        </button>
-                                        <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
-                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                            <ChevronLeft size={16} />
-                                        </button>
-                                        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 transition-colors">
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Trang</span>
-                                            <input type="number" min={1} max={totalPages} value={pageInput}
-                                                onChange={(e) => setPageInput(e.target.value)}
-                                                onBlur={() => { const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p); else setPageInput(currentPage.toString()); }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { const p = parseInt(pageInput); if (!isNaN(p) && p >= 1 && p <= totalPages) setCurrentPage(p); } }}
-                                                className="w-10 text-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-sm font-bold text-slate-800 dark:text-slate-100 h-7 transition-colors"
-                                            />
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ {totalPages}</span>
-                                        </div>
-                                        <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
-                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                            <ChevronRight size={16} />
-                                        </button>
-                                        <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}
-                                            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                            <ChevronsRight size={16} />
-                                        </button>
+                                {!isLoadingDocs && filteredDocs.length > 0 && (
+                                    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors">
+                                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                                            Hiển thị <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                                {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredDocs.length)}
+                                            </span> / <span className="font-semibold text-slate-600 dark:text-slate-300">{filteredDocs.length}</span> tài liệu
+                                        </p>
+                                        {totalPages > 1 && (
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                                    <ChevronLeft size={14} />
+                                                </button>
+                                                {renderDocPages().map((p, i) =>
+                                                    p === '...' ? (
+                                                        <span key={`e-${i}`} className="w-7 h-7 flex items-center justify-center text-xs text-slate-400">…</span>
+                                                    ) : (
+                                                        <button key={p} onClick={() => setCurrentPage(p as number)}
+                                                            className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors
+                                                                ${p === currentPage ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                            {p}
+                                                        </button>
+                                                    )
+                                                )}
+                                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

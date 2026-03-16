@@ -120,11 +120,22 @@ async def upload_batch(
 async def delete_file(
     document_id: str,
     current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
 ):
     """
-    Xoá tài liệu khỏi ChromaDB theo document_id.
+    Xoá tài liệu khỏi ChromaDB + file gốc trên disk.
     **Yêu cầu quyền admin.**
     """
+    # Xóa file gốc trên disk nếu có
+    doc = db.query(models.Document).filter(models.Document.id == document_id).first()
+    if doc and doc.file_path:
+        from pathlib import Path
+        file = Path(doc.file_path)
+        if file.exists():
+            file.unlink()
+            logger.info(f"Deleted file from disk: {file}")
+
+    # Xóa khỏi ChromaDB
     await delete_document(document_id)
     return {"message": f"Đã xoá document {document_id}"}
 
