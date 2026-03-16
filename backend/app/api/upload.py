@@ -42,6 +42,42 @@ class BatchUploadResponse(BaseModel):
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
+@router.get("/{document_id}/download")
+async def download_original_file(
+    document_id: str,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Tải về file gốc đã upload (trước khi chunking).
+    Trả về file binary với Content-Disposition để browser download/preview.
+    **Yêu cầu quyền admin.**
+    """
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    import mimetypes
+
+    doc = db.query(models.Document).filter(models.Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài liệu")
+
+    if not doc.file_path:
+        raise HTTPException(status_code=404, detail="Tài liệu này không có file gốc được lưu trên hệ thống")
+
+    file = Path(doc.file_path)
+    if not file.exists():
+        raise HTTPException(status_code=404, detail="File gốc không tồn tại trên server. Có thể đã bị xóa thủ công.")
+
+    media_type, _ = mimetypes.guess_type(doc.filename)
+    media_type = media_type or "application/octet-stream"
+
+    return FileResponse(
+        path=str(file),
+        filename=doc.filename,
+        media_type=media_type,
+    )
+
+
 @router.post("", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(..., description="File PDF, DOCX, TXT, PPTX... tối đa 50MB"),

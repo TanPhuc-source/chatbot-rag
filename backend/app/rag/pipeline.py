@@ -1,7 +1,7 @@
 """
 RAG Pipeline — kết nối toàn bộ luồng:
 
-  Query → [HyDE] → [Query Transform] → Hybrid Search → Rerank → Prompt → LLM → Response
+  Query → [Chitchat?] → [HyDE] → [Query Transform] → Hybrid Search → Rerank → Prompt → LLM → Response
 
 Các kỹ thuật nâng cao (bật/tắt qua .env):
   - HyDE: embed hypothetical answer thay cho query gốc → vector search chính xác hơn
@@ -10,6 +10,7 @@ Các kỹ thuật nâng cao (bật/tắt qua .env):
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import AsyncIterator
 
@@ -23,6 +24,7 @@ from app.rag.prompts import (
     build_summarize_prompt,
     build_out_of_scope_response,
     get_llm_params,
+    get_system_prompt,
 )
 from app.rag.query_transform import multi_query_search
 from app.rag.faq_matcher import find_matching_faq
@@ -33,6 +35,96 @@ from app.utils.logger import logger
 
 # Ngưỡng score tối thiểu — chunk dưới ngưỡng này bị bỏ qua
 RELEVANCE_THRESHOLD = 0.15
+
+# ── Chitchat patterns ──────────────────────────────────────────────────────────
+# Các pattern hội thoại thông thường không cần tra tài liệu
+_CHITCHAT_PATTERNS = [
+    # Chào hỏi
+    r"^(xin chào|chào|hello|hi|hey|chào bạn|chào bot|good morning|good afternoon|good evening|good night)",
+    # Tạm biệt
+    r"(tạm biệt|bye|goodbye|hẹn gặp lại|chào tạm biệt|tạm biệt nhé|bái bai|see you|cya)",
+    # Cảm ơn (đứng một mình hoặc kết hợp với tạm biệt/ok)
+    r"^(cảm ơn|cảm ơn bạn|cảm ơn nhiều|thank|thanks|thank you|cảm ơn nhé|ok cảm ơn|oke cảm ơn|oke thanks|ok thanks)",
+    # Phản hồi ngắn đồng ý/hiểu rồi (không kèm câu hỏi)
+    r"^(ok|oke|okay|được rồi|rõ rồi|hiểu rồi|hiểu|được|vâng|dạ|ừ|uh|uhh|ah ok|ah được|alright|got it|noted)[\s!.]*$",
+    # Hỏi về bản thân bot
+    r"(bạn là ai|mày là ai|bạn tên gì|tên bạn là gì|bạn là gì|bạn làm được gì|bạn có thể làm gì|who are you|what are you|what can you do)",
+    # Hỏi bot có khỏe không
+    r"(bạn có khỏe|bạn khỏe không|how are you|bạn thế nào)",
+]
+
+_CHITCHAT_RE = re.compile(
+    "|".join(_CHITCHAT_PATTERNS),
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def _is_chitchat(query: str) -> bool:
+    """
+    Trả về True nếu query là hội thoại thông thường, không cần tra tài liệu.
+    Kiểm tra thêm độ dài — câu hỏi thực thường dài hơn 4 từ.
+    """
+    q = query.strip()
+    if not q:
+        return True
+    # Câu quá ngắn (≤ 4 từ) và match pattern → chitchat
+    word_count = len(q.split())
+    if _CHITCHAT_RE.search(q):
+        # Nếu câu dài hơn 8 từ, có thể vừa chào vừa hỏi → không skip RAG
+        if word_count <= 8:
+            return True
+    return False
+
+
+async def _chitchat_response(
+    question: str,
+    history: list[dict] | None = None,
+) -> str:
+    """
+    Dùng LLM trả lời hội thoại ngắn, không cần tài liệu.
+    Prompt nhẹ hơn, không inject context.
+    """
+    system = get_system_prompt()
+    chitchat_system = (
+        system
+        + "\n\nLưu ý: Đây là hội thoại xã giao thông thường (chào hỏi, cảm ơn, tạm biệt...). "
+        "Hãy trả lời tự nhiên, thân thiện và ngắn gọn. "
+        "KHÔNG cần tra tài liệu hay trích dẫn nguồn cho loại câu này."
+    )
+    messages = [{"role": "system", "content": chitchat_system}]
+    if history:
+        messages.extend(history[-4:])
+    messages.append({"role": "user", "content": question})
+
+    llm = get_llm_provider()
+    llm_params = get_llm_params()
+    # Dùng temperature cao hơn một chút cho chitchat tự nhiên hơn
+    chitchat_params = {**llm_params, "temperature": max(llm_params.get("temperature", 0.3), 0.6), "max_tokens": 256}
+    return await llm.chat(messages, **chitchat_params)
+
+
+async def _chitchat_stream(
+    question: str,
+    history: list[dict] | None = None,
+) -> AsyncIterator[str]:
+    """Streaming version của chitchat response."""
+    system = get_system_prompt()
+    chitchat_system = (
+        system
+        + "\n\nLưu ý: Đây là hội thoại xã giao thông thường (chào hỏi, cảm ơn, tạm biệt...). "
+        "Hãy trả lời tự nhiên, thân thiện và ngắn gọn. "
+        "KHÔNG cần tra tài liệu hay trích dẫn nguồn cho loại câu này."
+    )
+    messages = [{"role": "system", "content": chitchat_system}]
+    if history:
+        messages.extend(history[-4:])
+    messages.append({"role": "user", "content": question})
+
+    llm = get_llm_provider()
+    llm_params = get_llm_params()
+    chitchat_params = {**llm_params, "temperature": max(llm_params.get("temperature", 0.3), 0.6), "max_tokens": 256}
+    async for token in llm.stream(messages, **chitchat_params):
+        yield token
 
 
 @dataclass
@@ -165,6 +257,12 @@ async def answer(
     """
     logger.info(f"RAG query: '{question[:80]}'")
 
+    # 0. Chitchat detection — bypass RAG hoàn toàn
+    if _is_chitchat(question):
+        logger.info(f"Chitchat detected, skipping RAG: '{question[:60]}'")
+        answer_text = await _chitchat_response(question, history)
+        return RAGResponse(answer=answer_text, sources=[], chunks_used=0)
+
     # 1. Retrieve + rerank
     chunks = await _retrieve_and_rerank(question, collection_name)
 
@@ -211,6 +309,16 @@ async def stream_answer(
     - RAGResponse cuối cùng (sources + metadata) sau khi xong
     """
     logger.info(f"RAG stream query: '{question[:80]}'")
+
+    # 0. Chitchat detection — bypass RAG hoàn toàn
+    if _is_chitchat(question):
+        logger.info(f"Chitchat detected (stream), skipping RAG: '{question[:60]}'")
+        full_answer = ""
+        async for token in _chitchat_stream(question, history):
+            full_answer += token
+            yield token
+        yield RAGResponse(answer=full_answer, sources=[], chunks_used=0)
+        return
 
     # 1. Retrieve + rerank (không stream phần này)
     chunks = await _retrieve_and_rerank(question, collection_name)

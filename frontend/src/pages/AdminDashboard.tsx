@@ -113,7 +113,7 @@ export default function AdminDashboard() {
         if (!token) return;
         setIsLoading(true);
         try {
-            const res = await fetch('http://127.0.0.1:8000/history/admin/sessions?limit=200', {
+            const res = await fetch('http://127.0.0.1:8000/history/admin/sessions?limit=1000', {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Không thể tải danh sách phiên chat');
@@ -438,12 +438,16 @@ export default function AdminDashboard() {
                                         <p className="text-sm">{searchTerm ? 'Không tìm thấy phiên chat' : 'Chưa có phiên chat nào'}</p>
                                     </div>
                                 ) : (
-                                    <AnimatePresence>
-                                        {paginated.map((session, idx) => (
-                                            <motion.div key={session.id}
-                                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: -16 }}
-                                                transition={{ delay: idx * 0.02 }}
-                                                className={`flex items-center gap-3 px-5 py-3 transition-colors group
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={currentPage}
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            transition={{ duration: 0.15 }}>
+                                        {paginated.map((session) => (
+                                            <div key={session.id}
+                                                className={`flex items-center gap-3 px-5 py-3 transition-colors group border-b border-slate-50 dark:border-slate-700/40 last:border-none
                                                     ${selectedIds.includes(session.id)
                                                         ? 'bg-indigo-50/60 dark:bg-indigo-900/10'
                                                         : 'hover:bg-slate-50/70 dark:hover:bg-slate-700/30'}`}>
@@ -508,8 +512,9 @@ export default function AdminDashboard() {
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
-                                            </motion.div>
+                                            </div>
                                         ))}
+                                        </motion.div>
                                     </AnimatePresence>
                                 )}
                             </div>

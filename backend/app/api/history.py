@@ -129,7 +129,7 @@ class SessionWithUser(BaseModel):
 @router.get("/admin/sessions", response_model=list[SessionWithUser])
 def admin_get_all_sessions(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000,
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
