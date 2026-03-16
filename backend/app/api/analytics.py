@@ -171,6 +171,74 @@ def get_feedback_trend(
     ]
 
 
+class NoFeedbackItem(BaseModel):
+    message_id: int
+    question: str
+    answer: str
+    session_title: str | None
+    created_at: str
+
+
+@router.get("/no-feedback", response_model=list[NoFeedbackItem])
+def get_no_feedback_messages(
+    limit: int = 100,
+    days: int = 30,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Lấy các tin nhắn bot CHƯA có feedback (không thumbs_up / thumbs_down).
+    Trả về kèm câu hỏi của user ngay trước đó.
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+
+    # Subquery: message_id đã có feedback
+    rated_ids = db.query(models.MessageFeedback.message_id).subquery()
+
+    # Lấy các tin nhắn bot chưa có feedback
+    bot_msgs = (
+        db.query(models.ChatMessage)
+        .filter(
+            models.ChatMessage.role == "assistant",
+            models.ChatMessage.created_at >= since,
+            models.ChatMessage.id.notin_(rated_ids),
+        )
+        .order_by(models.ChatMessage.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    result = []
+    for bot_msg in bot_msgs:
+        # Tìm câu hỏi user ngay trước đó trong cùng session
+        user_msg = (
+            db.query(models.ChatMessage)
+            .filter(
+                models.ChatMessage.session_id == bot_msg.session_id,
+                models.ChatMessage.id < bot_msg.id,
+                models.ChatMessage.role == "user",
+            )
+            .order_by(models.ChatMessage.id.desc())
+            .first()
+        )
+        if not user_msg:
+            continue
+
+        session = db.query(models.ChatSession).filter(
+            models.ChatSession.id == bot_msg.session_id
+        ).first()
+
+        result.append(NoFeedbackItem(
+            message_id=bot_msg.id,
+            question=user_msg.content,
+            answer=bot_msg.content,
+            session_title=session.title if session else None,
+            created_at=bot_msg.created_at.isoformat(),
+        ))
+
+    return result
+
+
 @router.get("/export")
 def export_chat_history(
     days: Optional[int] = None,

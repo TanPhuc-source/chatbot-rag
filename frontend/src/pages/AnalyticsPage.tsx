@@ -63,20 +63,33 @@ function DonutChart({ up, down }: { up: number; down: number }) {
     );
 }
 
-// ─── Hourly bar chart (Canvas) ────────────────────────────────────────────────
+// ─── Hourly bar chart ─────────────────────────────────────────────────────────
 function HourlyBars({ data }: { data: { hour: number; count: number }[] }) {
+    // Coerce to number — API may return strings
     const filled = Array.from({ length: 24 }, (_, i) => {
-        const found = data.find(d => d.hour === i);
-        return { hour: i, count: found?.count ?? 0 };
+        const found = data.find(d => Number(d.hour) === i);
+        return { hour: i, count: found ? Number(found.count) : 0 };
     });
     const max = Math.max(...filled.map(d => d.count), 1);
+    const hasData = filled.some(d => d.count > 0);
     const tickHours = [0, 6, 12, 18, 23];
+
+    if (!hasData) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[140px] text-slate-400 dark:text-slate-500 gap-2">
+                <MessagesSquare size={24} className="opacity-30" />
+                <p className="text-xs">Chưa có phiên nào trong 7 ngày qua</p>
+            </div>
+        );
+    }
+
     return (
         <div>
             <div className="flex items-end gap-[3px] h-[140px]">
                 {filled.map(({ hour, count }) => {
-                    const h = Math.max(Math.round((count / max) * 100), count > 0 ? 3 : 1);
-                    const opacity = 0.35 + 0.65 * (count / max);
+                    const h = count === 0 ? 2 : Math.max(Math.round((count / max) * 100), 4);
+                    // Minimum opacity 0.15 for zero bars, 0.5–1.0 for non-zero
+                    const opacity = count === 0 ? 0.1 : 0.5 + 0.5 * (count / max);
                     return (
                         <div key={hour} title={`${hour}:00 — ${count} phiên`}
                             className="flex-1 flex items-end cursor-default group">
@@ -99,20 +112,29 @@ function HourlyBars({ data }: { data: { hour: number; count: number }[] }) {
 function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thumbs_down: number }[] }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    useEffect(() => {
+    // Wrap draw logic in useCallback so ResizeObserver can reuse it
+    const draw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || data.length === 0) return;
+        const W = canvas.offsetWidth;
+        if (W === 0) return; // not laid out yet — rAF will retry
+        const H = 140;
         const dpr = window.devicePixelRatio || 1;
-        const W = canvas.offsetWidth, H = 140;
         canvas.width = W * dpr;
         canvas.height = H * dpr;
         const ctx = canvas.getContext('2d')!;
         ctx.scale(dpr, dpr);
 
         const pad = { l: 28, r: 8, t: 10, b: 24 };
-        const allVals = data.flatMap(d => [d.thumbs_up, d.thumbs_down]);
+        // Coerce to number — API may return strings
+        const allVals = data.flatMap(d => [Number(d.thumbs_up), Number(d.thumbs_down)]);
         const vMax = Math.max(...allVals, 1) + 2;
-        const xS = (i: number) => pad.l + (i / (data.length - 1)) * (W - pad.l - pad.r);
+
+        // Handle single data point (would cause division by zero in xS)
+        const xS = (i: number) =>
+            data.length === 1
+                ? W / 2
+                : pad.l + (i / (data.length - 1)) * (W - pad.l - pad.r);
         const yS = (v: number) => pad.t + (1 - v / vMax) * (H - pad.t - pad.b);
 
         const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -129,9 +151,7 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
             ctx.stroke();
         });
 
-        // Draw line helper
         const drawLine = (vals: number[], color: string, fillColor: string) => {
-            // Fill
             ctx.beginPath();
             vals.forEach((v, i) => i === 0 ? ctx.moveTo(xS(i), yS(v)) : ctx.lineTo(xS(i), yS(v)));
             ctx.lineTo(xS(vals.length - 1), yS(0));
@@ -139,14 +159,12 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
             ctx.closePath();
             ctx.fillStyle = fillColor;
             ctx.fill();
-            // Line
             ctx.beginPath();
             vals.forEach((v, i) => i === 0 ? ctx.moveTo(xS(i), yS(v)) : ctx.lineTo(xS(i), yS(v)));
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.lineJoin = 'round';
             ctx.stroke();
-            // Dots
             vals.forEach((v, i) => {
                 ctx.beginPath();
                 ctx.arc(xS(i), yS(v), 3, 0, Math.PI * 2);
@@ -155,10 +173,9 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
             });
         };
 
-        drawLine(data.map(d => d.thumbs_up), '#22c55e', 'rgba(34,197,94,0.08)');
-        drawLine(data.map(d => d.thumbs_down), '#ef4444', 'rgba(239,68,68,0.08)');
+        drawLine(data.map(d => Number(d.thumbs_up)), '#22c55e', 'rgba(34,197,94,0.08)');
+        drawLine(data.map(d => Number(d.thumbs_down)), '#ef4444', 'rgba(239,68,68,0.08)');
 
-        // X labels (every 2)
         ctx.fillStyle = labelColor;
         ctx.font = `9px sans-serif`;
         ctx.textAlign = 'center';
@@ -168,9 +185,47 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
         });
     }, [data]);
 
+    // rAF ensures canvas offsetWidth is non-zero before drawing
+    useEffect(() => {
+        const raf = requestAnimationFrame(draw);
+        return () => cancelAnimationFrame(raf);
+    }, [draw]);
+
+    // Re-draw whenever the container changes size (e.g. sidebar collapse)
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ro = new ResizeObserver(() => requestAnimationFrame(draw));
+        ro.observe(canvas);
+        return () => ro.disconnect();
+    }, [draw]);
+
     return (
         <div className="relative">
-            <canvas ref={canvasRef} style={{ width: '100%', height: '140px', display: 'block' }} />
+            {data.length <= 1 ? (
+                <div className="flex flex-col items-center justify-center h-[140px] text-slate-400 dark:text-slate-500 gap-2">
+                    <TrendingUp size={24} className="opacity-30" />
+                    <p className="text-xs text-center">
+                        {data.length === 0
+                            ? 'Chưa có dữ liệu phản hồi trong 14 ngày qua'
+                            : `Chỉ có dữ liệu 1 ngày (${data[0]?.date?.slice(5) ?? ''}) — cần thêm dữ liệu để vẽ đường xu hướng`}
+                    </p>
+                    {data.length === 1 && (
+                        <div className="flex gap-4 text-xs mt-1">
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                                Hữu ích: <strong className="text-slate-600 dark:text-slate-300">{data[0].thumbs_up}</strong>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                                Không hữu ích: <strong className="text-slate-600 dark:text-slate-300">{data[0].thumbs_down}</strong>
+                            </span>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <canvas ref={canvasRef} style={{ width: '100%', height: '140px', display: 'block' }} />
+            )}
             <div className="flex gap-4 mt-2 justify-end">
                 {[{ label: 'Hữu ích', color: 'bg-green-500' }, { label: 'Không hữu ích', color: 'bg-red-500' }].map(l => (
                     <span key={l.label} className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
@@ -218,33 +273,33 @@ function PopularTable({ data }: { data: { question: string; count: number; categ
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: idx * 0.04 }}
                                     className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors group">
-                                    <td className="py-3.5 pr-3">
+                                    <td className="py-2.5 pr-3">
                                         <span className={`text-sm font-bold ${i < 3 ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
                                             {i + 1}
                                         </span>
                                     </td>
-                                    <td className="py-3.5">
+                                    <td className="py-2.5">
                                         <p className="text-sm text-slate-700 dark:text-slate-200 leading-snug">{item.question}</p>
                                         {item.category && (
                                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{item.category}</p>
                                         )}
                                     </td>
-                                    <td className="py-3.5 px-4">
+                                    <td className="py-2.5 px-4">
                                         <div className="h-[6px] bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden">
                                             <div className="h-full rounded-full transition-all duration-700 ease-out"
                                                 style={{ width: `${pct}%`, background: color }} />
                                         </div>
                                     </td>
-                                    <td className="py-3.5 text-right">
+                                    <td className="py-2.5 text-right">
                                         <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{item.count}</span>
                                     </td>
-                                    <td className="py-3.5 pl-3 text-center">
+                                    <td className="py-2.5 pl-3 text-center">
                                         {trend != null ? (
                                             <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${trend > 0
-                                                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                                                    : trend < 0
-                                                        ? 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
-                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                                                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                                                : trend < 0
+                                                    ? 'bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
                                                 }`}>
                                                 {trend > 0 ? <TrendingUp size={11} /> : trend < 0 ? <TrendingDown size={11} /> : <Minus size={11} />}
                                                 {trend > 0 ? `+${trend}%` : trend < 0 ? `${trend}%` : '—'}
@@ -258,32 +313,26 @@ function PopularTable({ data }: { data: { question: string; count: number; categ
                 </table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100 dark:border-slate-700/60">
                     <p className="text-xs text-slate-400 dark:text-slate-500">
                         Hiển thị <span className="font-semibold text-slate-600 dark:text-slate-300">{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, data.length)}</span> / {data.length} câu hỏi
                     </p>
                     <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setPage(p => Math.max(0, p - 1))}
-                            disabled={page === 0}
+                        <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium">
                             ‹
                         </button>
                         {Array.from({ length: totalPages }, (_, i) => (
-                            <button key={i}
-                                onClick={() => setPage(i)}
+                            <button key={i} onClick={() => setPage(i)}
                                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${i === page
-                                        ? 'bg-indigo-600 text-white shadow-sm'
-                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                                     }`}>
                                 {i + 1}
                             </button>
                         ))}
-                        <button
-                            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                            disabled={page === totalPages - 1}
+                        <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium">
                             ›
                         </button>
@@ -351,17 +400,16 @@ export default function AnalyticsPage() {
     };
 
     const statCards = summary ? [
-        { label: 'Tổng phiên chat', value: summary.total_sessions.toLocaleString(), icon: <MessagesSquare size={16} />, iconBg: 'bg-indigo-100 dark:bg-indigo-900/40', iconColor: 'text-indigo-600 dark:text-indigo-400' },
-        { label: 'Tổng tin nhắn', value: summary.total_messages.toLocaleString(), icon: <MessageSquare size={16} />, iconBg: 'bg-violet-100 dark:bg-violet-900/40', iconColor: 'text-violet-600 dark:text-violet-400' },
-        { label: 'Người dùng', value: summary.total_users.toLocaleString(), icon: <Users size={16} />, iconBg: 'bg-cyan-100 dark:bg-cyan-900/40', iconColor: 'text-cyan-600 dark:text-cyan-400' },
-        { label: 'Hôm nay', value: summary.sessions_today, icon: <TrendingUp size={16} />, iconBg: 'bg-orange-100 dark:bg-orange-900/40', iconColor: 'text-orange-600 dark:text-orange-400' },
-        { label: '👍 Hữu ích', value: summary.thumbs_up, icon: <ThumbsUp size={16} />, iconBg: 'bg-emerald-100 dark:bg-emerald-900/40', iconColor: 'text-emerald-600 dark:text-emerald-400' },
-        { label: '👎 Không hữu ích', value: summary.thumbs_down, icon: <ThumbsDown size={16} />, iconBg: 'bg-red-100 dark:bg-red-900/40', iconColor: 'text-red-600 dark:text-red-400' },
+        { label: 'Tổng phiên chat', value: summary.total_sessions.toLocaleString(), icon: <MessagesSquare size={18} />, iconBg: 'bg-indigo-100 dark:bg-indigo-900/40', iconColor: 'text-indigo-600 dark:text-indigo-400' },
+        { label: 'Tổng tin nhắn', value: summary.total_messages.toLocaleString(), icon: <MessageSquare size={18} />, iconBg: 'bg-violet-100 dark:bg-violet-900/40', iconColor: 'text-violet-600 dark:text-violet-400' },
+        { label: 'Người dùng', value: summary.total_users.toLocaleString(), icon: <Users size={18} />, iconBg: 'bg-cyan-100 dark:bg-cyan-900/40', iconColor: 'text-cyan-600 dark:text-cyan-400' },
+        { label: 'Hôm nay', value: summary.sessions_today, icon: <TrendingUp size={18} />, iconBg: 'bg-orange-100 dark:bg-orange-900/40', iconColor: 'text-orange-600 dark:text-orange-400' },
+        { label: '👍 Hữu ích', value: summary.thumbs_up, icon: <ThumbsUp size={18} />, iconBg: 'bg-emerald-100 dark:bg-emerald-900/40', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+        { label: '👎 Không hữu ích', value: summary.thumbs_down, icon: <ThumbsDown size={18} />, iconBg: 'bg-red-100 dark:bg-red-900/40', iconColor: 'text-red-600 dark:text-red-400' },
     ] : [];
 
     return (
         <>
-            {/* Toast */}
             <div className="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence>
                     {toasts.map(t => (
@@ -371,7 +419,7 @@ export default function AnalyticsPage() {
                             ${t.type === 'success' ? 'border-green-200 dark:border-green-800/50 text-green-700 dark:text-green-400'
                                     : t.type === 'error' ? 'border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400'
                                         : 'border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400'}`}>
-                            {t.type === 'success' ? <CheckCircle size={16} /> : t.type === 'error' ? <XCircle size={16} /> : <Info size={16} />}
+                            {t.type === 'success' ? <CheckCircle size={15} /> : t.type === 'error' ? <XCircle size={15} /> : <Info size={15} />}
                             {t.message}
                         </motion.div>
                     ))}
@@ -379,7 +427,6 @@ export default function AnalyticsPage() {
             </div>
 
             <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50 dark:bg-slate-900 transition-colors">
-                {/* Header */}
                 <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 sticky top-0 z-30 transition-colors">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)}
@@ -410,17 +457,14 @@ export default function AnalyticsPage() {
                     </div>
                 </header>
 
-                {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 lg:p-8">
                     <div className="max-w-6xl mx-auto space-y-5">
-
                         {isLoading ? (
                             <div className="flex items-center justify-center py-32 text-slate-400 dark:text-slate-500">
                                 <RefreshCw size={32} className="animate-spin opacity-40" />
                             </div>
                         ) : (
                             <>
-                                {/* ── Stat cards ── */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                     {statCards.map(({ label, value, icon, iconBg, iconColor }, i) => (
                                         <motion.div key={label}
@@ -436,10 +480,7 @@ export default function AnalyticsPage() {
                                     ))}
                                 </div>
 
-                                {/* ── Charts row ── */}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-                                    {/* Hourly bar chart */}
                                     <div className="lg:col-span-2 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
                                         <div className="flex items-center justify-between mb-5">
                                             <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Phân bố theo giờ</h3>
@@ -448,7 +489,6 @@ export default function AnalyticsPage() {
                                         <HourlyBars data={hourly} />
                                     </div>
 
-                                    {/* Donut feedback */}
                                     <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6 flex flex-col">
                                         <div className="flex items-center justify-between mb-5">
                                             <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Tỷ lệ phản hồi</h3>
@@ -469,7 +509,6 @@ export default function AnalyticsPage() {
                                     </div>
                                 </div>
 
-                                {/* ── Feedback trend ── */}
                                 {feedbackTrend.length > 0 && (
                                     <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
                                         <div className="flex items-center justify-between mb-5">
@@ -480,7 +519,6 @@ export default function AnalyticsPage() {
                                     </div>
                                 )}
 
-                                {/* ── Popular questions ── */}
                                 <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
                                     <div className="flex items-center justify-between mb-5">
                                         <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Câu hỏi phổ biến nhất</h3>

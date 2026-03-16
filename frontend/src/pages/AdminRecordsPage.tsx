@@ -7,7 +7,7 @@ import {
     BrainCircuit, Search, Menu, X, XCircle,
     ChevronLeft, ChevronRight,
     LogOut, Layers, Clock, AlertTriangle, Info,
-    Eye, BookOpen, Hash, BookMarked
+    Eye, BookOpen, Hash, BookMarked, Download
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -349,6 +349,29 @@ export default function AdminRecordsPage() {
     const countByStatus = (s: DocStatus) => documents.filter(d =>
         d.status === s || (s === 'indexed' && (d.status === 'done' || d.status === 'success' as any))
     ).length;
+
+    // --- Download original file ---
+    const handleDownloadOriginal = async (doc: DocumentItem) => {
+        try {
+            const res = await fetch(`http://127.0.0.1:8000/upload/${doc.id}/download`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({}));
+                addToast(body.detail || 'Không thể tải file gốc', 'error');
+                return;
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = doc.name;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch {
+            addToast('Lỗi kết nối khi tải file', 'error');
+        }
+    };
 
     // Smart pagination helper
     const renderDocPages = () => {
@@ -752,11 +775,18 @@ export default function AdminRecordsPage() {
                                                     </div>
 
                                                     {/* Actions */}
-                                                    <div className="w-16 flex justify-center gap-1 shrink-0">
+                                                    <div className="w-16 flex justify-end items-center gap-1 shrink-0">
+                                                        <button
+                                                            onClick={() => handleDownloadOriginal(doc)}
+                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            title="Tải file gốc"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
                                                         <button
                                                             onClick={() => openPreview(doc)}
                                                             className="p-2 text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                                            title="Xem nội dung"
+                                                            title="Xem nội dung chunks"
                                                         >
                                                             <Eye size={16} />
                                                         </button>
