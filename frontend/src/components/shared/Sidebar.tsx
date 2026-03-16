@@ -11,16 +11,32 @@ interface Props {
 }
 
 export default function Sidebar({ collapsed = false, onToggle, onClose }: Props) {
-  const { conversations, activeId, clearMessages, setActiveConversation } = useChatStore();
+  const { conversations, activeId, clearMessages, loadHistory, selectConversation } = useChatStore();
   const { isLoggedIn, username, role, logout, init } = useAuthStore();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => { init(); }, [init]);
 
+  // Load lịch sử từ DB khi user đăng nhập
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (isLoggedIn && token) {
+      loadHistory(token);
+    }
+  }, [isLoggedIn, loadHistory]);
+
   const T = "0.25s cubic-bezier(0.4,0,0.2,1)";
   const handleNew = () => { clearMessages(); onClose?.(); };
-  const handleSelect = (id: string) => { setActiveConversation(id); onClose?.(); };
+
+  const handleSelect = (id: string) => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      selectConversation(id, token);
+    }
+    onClose?.();
+  };
+
   const handleLogout = () => { logout(); clearMessages(); navigate("/"); };
 
   // Shared style cho phần text slide — opacity + width transition
