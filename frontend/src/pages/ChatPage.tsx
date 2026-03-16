@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, Sparkles } from "lucide-react";
 import ChatWindow from "@/components/chat/ChatWindow";
 import Sidebar from "@/components/shared/Sidebar";
@@ -9,69 +9,114 @@ export default function ChatPage() {
   const [collapsed, setCollapsed] = useState(false);   // desktop: thu gọn
   const [mobileOpen, setMobileOpen] = useState(false); // mobile: mở drawer
 
-  return (
-    <div style={{ display: "flex", height: "100dvh", width: "100vw", overflow: "hidden", position: "fixed", top: 0, left: 0, background: "var(--bg-base)" }}>
+  // LƯU Ý: Quản lý Theme Độc Lập cho Chatbot
+  const [chatDarkMode, setChatDarkMode] = useState(() => {
+    return localStorage.getItem("chat_theme_dark") === "true";
+  });
+  const [chatColor, setChatColor] = useState(() => {
+    return localStorage.getItem("chat_theme_color") || "#1a5fb4"; // Màu mặc định
+  });
 
-      {/* ── Desktop sidebar (lg+): luôn hiển thị, chỉ thu/mở) ── */}
+  useEffect(() => {
+    localStorage.setItem("chat_theme_dark", String(chatDarkMode));
+    localStorage.setItem("chat_theme_color", chatColor);
+  }, [chatDarkMode, chatColor]);
+
+  // Sinh các biến CSS động dựa trên chế độ sáng/tối cục bộ của Chat
+  const themeStyles = chatDarkMode ? {
+    "--bg-base": "#050c16",
+    "--bg-1": "#0d1b2a",
+    "--bg-2": "#1b263b",
+    "--bg-3": "#415a77",
+    "--text-primary": "#f8fafc",
+    "--text-secondary": "#e2e8f0",
+    "--text-muted": "#94a3b8",
+    "--border": "#1e293b",
+    "--border-mid": "#334155",
+    "--sb-bg": "#020617",
+    "--brand": chatColor,
+  } as React.CSSProperties : {
+    "--bg-base": "#ffffff",
+    "--bg-1": "#ffffff",
+    "--bg-2": "#f8fafc",
+    "--bg-3": "#e2e8f0",
+    "--text-primary": "#0f172a",
+    "--text-secondary": "#334155",
+    "--text-muted": "#64748b",
+    "--border": "#e2e8f0",
+    "--border-mid": "#cbd5e1",
+    "--sb-bg": "#f8fafc",
+    "--brand": chatColor,
+  } as React.CSSProperties;
+
+  return (
+    <div
+      className={chatDarkMode ? "dark" : ""}
+      style={{
+        display: "flex", height: "100dvh", width: "100vw", overflow: "hidden",
+        position: "fixed", top: 0, left: 0,
+        background: "var(--bg-base)",
+        color: "var(--text-primary)",
+        transition: "background 0.3s, color 0.3s",
+        ...themeStyles
+      }}
+    >
+
+      {/* ── Desktop sidebar ── */}
       <div className="hidden lg:flex h-full" style={{ position: "relative", zIndex: 10, flexShrink: 0 }}>
-        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
+        <Sidebar
+          collapsed={collapsed}
+          onToggle={() => setCollapsed(p => !p)}
+          chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode}
+          chatColor={chatColor} setChatColor={setChatColor}
+        />
       </div>
 
       {/* ── Mobile sidebar: drawer overlay ── */}
       <div
         className="lg:hidden"
-        style={{
-          position: "fixed", inset: 0, zIndex: 40,
-          pointerEvents: mobileOpen ? "auto" : "none",
-        }}
+        style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: mobileOpen ? "auto" : "none" }}
       >
-        {/* Backdrop */}
         <div
           onClick={() => setMobileOpen(false)}
-          style={{
-            position: "absolute", inset: 0,
-            background: "rgba(5,12,22,0.55)",
-            backdropFilter: "blur(4px)",
-            opacity: mobileOpen ? 1 : 0,
-            transition: "opacity 0.25s ease",
-          }}
+          style={{ position: "absolute", inset: 0, background: "rgba(5,12,22,0.55)", backdropFilter: "blur(4px)", opacity: mobileOpen ? 1 : 0, transition: "opacity 0.25s ease" }}
         />
-        {/* Drawer */}
         <div style={{
           position: "absolute", top: 0, left: 0, height: "100%",
           transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
         }}>
-          <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} />
+          <Sidebar
+            collapsed={false}
+            onToggle={() => setMobileOpen(false)}
+            onClose={() => setMobileOpen(false)}
+            chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode}
+            chatColor={chatColor} setChatColor={setChatColor}
+          />
         </div>
       </div>
 
       {/* ── Main content ── */}
       <main style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0, overflow: "hidden", position: "relative", zIndex: 5 }}>
-        {/* Header */}
         <header
           className="main-header"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(12px, 3vw, 24px)", height: "clamp(52px, 8vw, 64px)", flexShrink: 0 }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 clamp(12px, 3vw, 24px)", height: "clamp(52px, 8vw, 64px)", flexShrink: 0, borderBottom: "1px solid var(--border)" }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Hamburger — chỉ hiện trên mobile */}
             <button
               onClick={() => setMobileOpen(true)}
               style={{ padding: 7, borderRadius: 9, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)", transition: "color 0.15s", display: "flex" }}
-              className="lg:!hidden"
+              className="lg:!hidden hover:bg-[var(--bg-3)]"
             >
               <Menu size={18} />
             </button>
-
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Logo nhỏ — chỉ hiện trên mobile */}
               <div className="lg:!hidden" style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#1a5fb4,#2a80d8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Sparkles size={13} color="white" />
               </div>
             </div>
           </div>
 
-          {/* Status badge */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 0 2px rgba(16,185,129,0.22)", display: "inline-block", animation: "pulse 2.5s ease infinite" }} />
             <span className="hidden sm:inline" style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>Đang hoạt động</span>
