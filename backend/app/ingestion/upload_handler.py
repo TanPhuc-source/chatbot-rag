@@ -30,7 +30,25 @@ class UploadResult:
     filename: str
     chunks_indexed: int
     status: str   # "indexed" | "failed"
+    file_path: str = ""
     error: str | None = None
+
+
+def _save_file(file_bytes: bytes, filename: str, document_id: str) -> str:
+    """
+    Lưu file gốc vào disk.
+    Đặt tên: <document_id>_<filename gốc> để tránh trùng.
+    Trả về đường dẫn tương đối đã lưu.
+    """
+    settings = get_settings()
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_name = Path(filename).name  # tránh path traversal
+    dest = upload_dir / f"{document_id}_{safe_name}"
+    dest.write_bytes(file_bytes)
+    logger.info(f"Saved file: {dest} ({len(file_bytes) // 1024}KB)")
+    return str(dest)
 
 
 async def handle_upload(
@@ -60,14 +78,21 @@ async def handle_upload(
     mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     settings = get_settings()
 
-    # 3. Lưu Document vào PostgreSQL (status = "processing")
+    # 3. Lưu file gốc vào disk
+    try:
+        file_path = _save_file(file_bytes, filename, document_id)
+    except Exception as e:
+        logger.warning(f"Cannot save file to disk: {e}, continuing without saving")
+        file_path = ""
+
+    # 4. Lưu Document vào PostgreSQL (status = "processing")
     db_doc = None
     if db is not None:
         from app.db.models import Document
         db_doc = Document(
             id=document_id,
             filename=filename,
-            file_path="",
+            file_path=file_path,
             status="processing",
             uploaded_by=uploaded_by,
         )
@@ -79,7 +104,7 @@ async def handle_upload(
     try:
         logger.info(f"Processing upload: {filename} ({size_mb:.2f}MB) → doc_id={document_id}")
 
-        # 4. Extract + chunk
+        # 5. Extract + chunk
         if suffix == ".json":
             chunks = load_json_bytes(file_bytes, filename=filename)
         elif is_image_file(filename):
@@ -95,11 +120,12 @@ async def handle_upload(
                 db_doc.status = "error"
                 db.commit()
             return UploadResult(
-                document_id=document_id, filename=filename, chunks_indexed=0, status="failed",
+                document_id=document_id, filename=filename, chunks_indexed=0,
+                status="failed", file_path=file_path,
                 error="Không trích xuất được nội dung từ file.",
             )
 
-        # 5. Làm sạch
+        # 6. Làm sạch
         chunks = clean_chunks(chunks)
 
         if not chunks:
@@ -107,11 +133,12 @@ async def handle_upload(
                 db_doc.status = "error"
                 db.commit()
             return UploadResult(
-                document_id=document_id, filename=filename, chunks_indexed=0, status="failed",
+                document_id=document_id, filename=filename, chunks_indexed=0,
+                status="failed", file_path=file_path,
                 error="Sau khi làm sạch, không còn nội dung hữu ích.",
             )
 
-        # 6. Contextual Headers (tùy chọn)
+        # 7. Contextual Headers (tùy chọn)
         if settings.ENABLE_CONTEXTUAL_HEADERS:
             logger.info(f"Enriching chunks with contextual headers: {filename}")
             chunks = await enrich_chunks_with_headers(
@@ -119,20 +146,22 @@ async def handle_upload(
                 max_chunks=settings.CONTEXTUAL_HEADERS_MAX_CHUNKS,
             )
 
-        # 7. Embed + index vào ChromaDB
+        # 8. Embed + index vào ChromaDB
         total_indexed = await index_chunks(chunks, document_id=document_id)
 
-        # 8. Cập nhật status → "indexed"
+        # 9. Cập nhật status → "indexed"
         if db_doc is not None:
             db_doc.status = "indexed"
+            db_doc.file_path = file_path
             db.commit()
 
-        logger.info(f"✅ Upload success: {filename} → {total_indexed} chunks indexed")
+        logger.info(f"✅ Upload success: {filename} → {total_indexed} chunks indexed, saved: {file_path}")
         return UploadResult(
             document_id=document_id,
             filename=filename,
             chunks_indexed=total_indexed,
             status="indexed",
+            file_path=file_path,
         )
 
     except Exception as e:
@@ -142,6 +171,6 @@ async def handle_upload(
             db_doc.status = "error"
             db.commit()
         return UploadResult(
-            document_id=document_id, filename=filename, chunks_indexed=0, status="failed",
-            error=str(e),
+            document_id=document_id, filename=filename, chunks_indexed=0,
+            status="failed", file_path=file_path, error=str(e),
         )
