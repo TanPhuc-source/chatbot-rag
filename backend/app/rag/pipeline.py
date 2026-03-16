@@ -44,7 +44,7 @@ _CHITCHAT_PATTERNS = [
     # Tạm biệt
     r"(tạm biệt|bye|goodbye|hẹn gặp lại|chào tạm biệt|tạm biệt nhé|bái bai|see you|cya)",
     # Cảm ơn (đứng một mình hoặc kết hợp với tạm biệt/ok)
-    r"^(cảm ơn|cảm ơn bạn|cảm ơn nhiều|thank|thanks|thank you|cảm ơn nhé|ok cảm ơn|oke cảm ơn|oke thanks|ok thanks)",
+    r"^(cảm ơn|cảm ơn bạn|cảm ơn nhiều|thank|thanks|thank you|cảm ơn nhé|ok cảm ơn|oke cảm ơn|oke thanks|ok thanks|oki)",
     # Phản hồi ngắn đồng ý/hiểu rồi (không kèm câu hỏi)
     r"^(ok|oke|okay|được rồi|rõ rồi|hiểu rồi|hiểu|được|vâng|dạ|ừ|uh|uhh|ah ok|ah được|alright|got it|noted)[\s!.]*$",
     # Hỏi về bản thân bot

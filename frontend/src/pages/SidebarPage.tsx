@@ -1,299 +1,169 @@
-import { useEffect, useState } from "react";
-import { Plus, MessageSquare, Trash2, Sparkles, User, ChevronLeft, LogIn, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useChatStore } from "@/store/chatStore";
-import { useAuthStore } from "@/store/authStore";
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import {
+    LayoutDashboard, BrainCircuit, Settings, LogOut, X,
+    FolderOpen, ShieldCheck, User as UserIcon, ChevronUp,
+    ThumbsUp, BarChart3, HelpCircle, SlidersHorizontal
+} from 'lucide-react';
 
-interface Props {
-  collapsed?: boolean;
-  onToggle?: () => void;
-  onClose?: () => void;
+import logoImage from '../components/images/images.jpg';
+
+const SCHOOL_INFO = {
+    LOGO_URL: logoImage,
+    NAME: "Trường Đại Học Đồng Tháp",
+    DEPT: "Trung Tâm Ngoại Ngữ Và Tin Học"
+};
+
+interface SidebarProps {
+    isMobileOpen: boolean;
+    setIsMobileOpen: (open: boolean) => void;
 }
 
-export default function Sidebar({ collapsed = false, onToggle, onClose }: Props) {
-  const { conversations, activeId, clearMessages, loadHistory, selectConversation } = useChatStore();
-  const { isLoggedIn, username, role, logout, init } = useAuthStore();
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const navigate = useNavigate();
+interface UserProfile {
+    username: string;
+    email: string;
+    full_name: string | null;
+    role: string;
+    avatar_url?: string | null;
+}
 
-  useEffect(() => { init(); }, [init]);
+export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
+    const { pathname } = useLocation();
+    const navigate = useNavigate();
 
-  // Load lịch sử từ DB khi user đăng nhập
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (isLoggedIn && token) {
-      loadHistory(token);
-    }
-  }, [isLoggedIn, loadHistory]);
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
-  const T = "0.25s cubic-bezier(0.4,0,0.2,1)";
-  const handleNew = () => { clearMessages(); onClose?.(); };
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                try {
+                    const response = await axios.get('http://127.0.0.1:8000/auth/me', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setCurrentUser(response.data);
+                } catch (error) {
+                    console.error("Lỗi lấy thông tin user:", error);
+                }
+            }
+        };
+        fetchUserData();
+    }, []);
 
-  const handleSelect = (id: string) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      selectConversation(id, token);
-    }
-    onClose?.();
-  };
+    const handleLogout = () => {
+        const confirmed = window.confirm('Bạn có chắc chắn muốn đăng xuất?');
+        if (confirmed) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_role');
+            navigate('/login');
+        }
+    };
 
-  const handleLogout = () => { logout(); clearMessages(); navigate("/"); };
+    const handleProfileClick = () => {
+        navigate('/profile');
+        setIsUserMenuOpen(false);
+    };
 
-  // Shared style cho phần text slide — opacity + width transition
-  const slideText = (extraStyle?: React.CSSProperties): React.CSSProperties => ({
-    overflow: "hidden",
-    whiteSpace: "nowrap",
-    maxWidth: collapsed ? 0 : 999,
-    opacity: collapsed ? 0 : 1,
-    transition: `max-width ${T}, opacity ${T}`,
-    ...extraStyle,
-  });
-
-  return (
-    <aside
-      className="sidebar-panel flex flex-col h-full shrink-0"
-      style={{ width: collapsed ? 68 : 300, transition: `width ${T}`, overflow: "hidden" }}
-    >
-
-      {/* ── Header ── */}
-      <div style={{
-        flexShrink: 0,
-        borderBottom: "1px solid var(--sb-border)",
-        display: "flex", flexDirection: "column",
-        padding: "14px 12px 12px",
-        gap: 10,
-      }}>
-
-        {/* Logo row — icon luôn cố định bên trái, text slide ra */}
-        <div style={{ display: "flex", alignItems: "center", gap: 0, height: 38 }}>
-          <button
-            onClick={onToggle}
-            style={{
-              width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-              background: "linear-gradient(135deg,#1a5fb4,#2a80d8)",
-              boxShadow: "0 4px 14px rgba(26,95,180,0.45)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              border: "none", cursor: "pointer",
-              marginLeft: collapsed ? 3 : 0,
-              transition: `margin-left ${T}`,
-            }}
-          >
-            <Sparkles size={15} color="white" />
-          </button>
-
-          {/* Text + chevron slide */}
-          <div style={slideText({ display: "flex", alignItems: "center", flex: 1, paddingLeft: 10 })}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-display sb-title" style={{ fontSize: 13, margin: 0 }}>Trợ lý AI TTNN–TH</p>
-              <p className="sb-sub" style={{ margin: 0 }}>ĐH Đồng Tháp</p>
-            </div>
-            <button
-              onClick={onToggle}
-              style={{
-                flexShrink: 0, padding: 5, borderRadius: 7,
-                border: "none", background: "var(--sb-badge-bg)",
-                cursor: "pointer", color: "var(--sb-muted)", display: "flex",
-                transition: "color 0.15s",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--sb-btn-text)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--sb-muted)")}
+    const SidebarItem = ({ icon: Icon, label, path }: { icon: any, label: string, path: string }) => {
+        const isActive = pathname === path || (path !== '/admin' && pathname.startsWith(path));
+        return (
+            <div
+                onClick={() => navigate(path)}
+                className={`
+                    flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all mb-1 font-sans
+                    ${isActive
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#2a2a2a] hover:text-blue-700 dark:hover:text-blue-400'}
+                `}
             >
-              <ChevronLeft size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* New chat button — icon cố định, text slide */}
-        <button
-          onClick={handleNew}
-          title={collapsed ? "Cuộc trò chuyện mới" : undefined}
-          style={{
-            display: "flex", alignItems: "center",
-            gap: 0,
-            width: "100%",
-            overflow: "hidden",
-            background: "none", border: "none",
-            cursor: "pointer",
-            padding: "8px 2px",
-            borderRadius: 8,
-            color: "var(--sb-text)",
-            fontFamily: "inherit", fontSize: 13, fontWeight: 500,
-            transition: `color 0.15s`,
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--sb-active-text)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--sb-text)")}
-        >
-          <div style={{ width: 38, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Plus size={17} />
-          </div>
-          <span style={slideText({ paddingLeft: 9 })}>
-            Cuộc trò chuyện mới
-          </span>
-        </button>
-      </div>
-
-      {/* ── Chat list ── */}
-      <nav className="sb-nav" style={{ padding: "10px", flex: 1, overflowY: "auto", overflowX: "hidden" }}>
-        {conversations.length === 0 && (
-          <>
-            {/* Icon hiển thị khi collapsed */}
-            <div style={{
-              display: "flex", justifyContent: "center", paddingTop: 16,
-              opacity: collapsed ? 1 : 0,
-              transition: `opacity ${T}`,
-              position: collapsed ? "static" : "absolute",
-              pointerEvents: "none",
-            }}>
-              <MessageSquare size={14} style={{ color: "var(--sb-icon)", opacity: 0.4 }} />
+                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[14px]">{label}</span>
             </div>
-            {/* Text hiển thị khi expanded */}
-            <div style={{
-              opacity: collapsed ? 0 : 1,
-              transition: `opacity ${T}`,
-              pointerEvents: collapsed ? "none" : "auto",
-            }}>
-              <div className="sb-empty">
-                <div className="sb-empty-icon"><MessageSquare size={16} /></div>
-                <p>Chưa có cuộc trò chuyện</p>
-              </div>
-            </div>
-          </>
-        )}
+        );
+    };
 
-        {conversations.map((conv, idx) => (
-          <div
-            key={conv.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "10px 10px",
-              borderRadius: 8,
-              cursor: "pointer",
-              background: activeId === conv.id ? "var(--sb-active-bg)" : "transparent",
-              transition: "background 0.15s",
-              marginTop: idx === 0 ? 0 : 3,
-              overflow: "hidden",
-            }}
-            onClick={() => handleSelect(conv.id)}
-            onMouseEnter={e => {
-              if (activeId !== conv.id) e.currentTarget.style.background = "var(--sb-hover)";
-              setHoveredId(conv.id);
-            }}
-            onMouseLeave={e => {
-              if (activeId !== conv.id) e.currentTarget.style.background = "transparent";
-              setHoveredId(null);
-            }}
-            title={collapsed ? conv.title : undefined}
-          >
-            {/* Icon — luôn cố định, không dịch chuyển */}
-            <MessageSquare
-              size={15}
-              style={{
-                flexShrink: 0,
-                color: activeId === conv.id ? "var(--sb-active-icon)" : "var(--sb-icon)",
-                marginLeft: collapsed ? 6 : 0,
-                transition: `margin-left ${T}`,
-              }}
-            />
+    const displayName = currentUser?.full_name || currentUser?.username || 'User';
+    const avatarUrl = currentUser?.avatar_url
+        ? `http://127.0.0.1:8000${currentUser.avatar_url}`
+        : `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&bold=true`;
 
-            {/* Text + trash — slide in/out */}
-            <div style={slideText({
-              display: "flex", alignItems: "center", gap: 8,
-              flex: 1, paddingLeft: 9, minWidth: 0,
-            })}>
-              <p style={{
-                fontSize: 13,
-                fontWeight: activeId === conv.id ? 500 : 400,
-                color: activeId === conv.id ? "var(--sb-active-text)" : "var(--sb-text)",
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                margin: 0, flex: 1, minWidth: 0,
-              }}>
-                {conv.title || "Cuộc trò chuyện"}
-              </p>
-              {hoveredId === conv.id && (
-                <button
-                  className="sb-trash-btn"
-                  onClick={e => { e.stopPropagation(); /* TODO: deleteConversation(conv.id) */ }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      {/* ── Footer ── */}
-      <div style={{
-        flexShrink: 0,
-        borderTop: "1px solid var(--sb-border)",
-        padding: "12px 12px 14px",
-        display: "flex", flexDirection: "column", gap: 8,
-      }}>
-
-        {/* User info — avatar cố định, text slide */}
-        <div style={{ display: "flex", alignItems: "center", padding: "0 0" }}>
-          <div
-            className="sb-avatar"
-            style={{
-              flexShrink: 0, width: 38, height: 34,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginLeft: collapsed ? 3 : 0,
-              transition: `margin-left ${T}`,
-            }}
-          >
-            <User size={13} />
-          </div>
-
-          <div style={slideText({ paddingLeft: 10, flex: 1 })}>
-            {isLoggedIn ? (
-              <>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--sb-text)", margin: 0, lineHeight: 1.2 }}>
-                  {username || "Tài khoản"}
-                </p>
-                <p style={{ fontSize: 10, color: "var(--sb-muted)", margin: "2px 0 0", lineHeight: 1 }}>
-                  {role === "admin" ? "Quản trị viên" : "Người dùng"}
-                </p>
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: 12, fontWeight: 500, color: "var(--sb-text)", margin: 0, lineHeight: 1.2 }}>Chế độ khách</p>
-                <p style={{ fontSize: 10, color: "var(--sb-muted)", margin: "2px 0 0", lineHeight: 1 }}>Lịch sử không được lưu</p>
-              </>
+    return (
+        <>
+            {isMobileOpen && (
+                <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
             )}
-          </div>
-        </div>
+            {isUserMenuOpen && (
+                <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
+            )}
 
-        {/* Login / Logout button — icon cố định, text slide */}
-        <button
-          onClick={isLoggedIn ? handleLogout : () => navigate("/login")}
-          title={collapsed ? (isLoggedIn ? "Đăng xuất" : "Đăng nhập") : undefined}
-          style={{
-            display: "flex", alignItems: "center",
-            gap: 0,
-            height: 38,
-            width: "100%",
-            borderRadius: 8,
-            paddingLeft: 0, paddingRight: 2,
-            fontFamily: "inherit", fontSize: 13, fontWeight: 500,
-            cursor: "pointer",
-            overflow: "hidden",
-            background: "none", border: "none",
-            color: isLoggedIn ? "var(--sb-muted)" : "var(--sb-active-icon)",
-            transition: `color 0.15s`,
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = isLoggedIn ? "var(--sb-btn-text)" : "var(--sb-active-text)")}
-          onMouseLeave={e => (e.currentTarget.style.color = isLoggedIn ? "var(--sb-muted)" : "var(--sb-active-icon)")}
-        >
-          <div style={{ width: 38, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            {isLoggedIn ? <LogOut size={17} /> : <LogIn size={17} />}
-          </div>
-          <span style={slideText({ paddingLeft: 9 })}>
-            {isLoggedIn ? "Đăng xuất" : "Đăng nhập"}
-          </span>
-        </button>
+            <aside className={`
+                fixed inset-y-0 left-0 z-50 w-[280px] bg-white dark:bg-[#161616] border-r border-slate-200 dark:border-[#2a2a2a] transform transition-all duration-300 ease-in-out flex flex-col shadow-lg lg:shadow-none
+                ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0
+            `}>
+                <div className="flex flex-col items-center text-center pt-8 pb-6 px-4 border-b border-slate-100 dark:border-[#2a2a2a]">
+                    <div className="w-20 h-20 bg-white dark:bg-[#2a2a2a] rounded-full p-1 shadow-sm border border-slate-200 dark:border-[#333] overflow-hidden mb-3">
+                        <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" className="w-full h-full object-cover rounded-full" />
+                    </div>
+                    <h1 className="font-bold text-sm text-blue-800 dark:text-blue-400 leading-tight uppercase tracking-wide font-['Times_New_Roman'] mb-1">
+                        {SCHOOL_INFO.NAME}
+                    </h1>
+                    <div className="bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full border border-blue-100 dark:border-blue-800">
+                        <p className="text-[10px] font-bold text-blue-600 dark:text-blue-300 uppercase tracking-wider font-['Times_New_Roman'] leading-none">
+                            {SCHOOL_INFO.DEPT}
+                        </p>
+                    </div>
+                </div>
 
-      </div>
-    </aside>
-  );
+                <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+                    <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2 tracking-widest font-sans">Quản lý</p>
+                    {currentUser?.role === 'admin' && (
+                        <SidebarItem icon={BarChart3} label="Thống kê & Báo cáo" path="/admin/analytics" />
+                    )}
+                    {currentUser?.role === 'admin' && (
+                        <SidebarItem icon={ShieldCheck} label="Quản lý tài khoản" path="/admin/accounts" />
+                    )}
+                    <SidebarItem icon={LayoutDashboard} label="Quản lý Chatbot" path="/admin" />
+                    <SidebarItem icon={FolderOpen} label="Quản lý hồ sơ tài liệu" path="/admin/records" />
+                    <SidebarItem icon={HelpCircle} label="Quản lý FAQ" path="/admin/faq" />
+                    <SidebarItem icon={ThumbsUp} label="Phản hồi người dùng" path="/admin/feedback" />
+                    <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot" path="/admin/bot-settings" />
+
+                    <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2 mt-8 tracking-widest font-sans">Hệ thống</p>
+                    <SidebarItem icon={Settings} label="Cài đặt chung" path="/admin/settings" />
+                </div>
+
+                <div className="relative p-4 border-t border-slate-100 dark:border-[#2a2a2a] bg-slate-50/50 dark:bg-[#0f0f0f]">
+                    {isUserMenuOpen && (
+                        <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-[#1e1e1e] rounded-xl shadow-xl border border-slate-100 dark:border-[#333] overflow-hidden z-50">
+                            <div onClick={handleProfileClick} className="flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-[#2a2a2a] cursor-pointer text-slate-700 dark:text-slate-300">
+                                <UserIcon size={16} className="text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-medium">Thông tin tài khoản</span>
+                            </div>
+                            <div className="h-[1px] bg-slate-100 dark:bg-[#333] mx-3"></div>
+                            <div onClick={handleLogout} className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer text-red-600 dark:text-red-400">
+                                <LogOut size={16} />
+                                <span className="text-sm font-medium">Đăng xuất</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none ${isUserMenuOpen ? 'bg-white dark:bg-[#2a2a2a] shadow-md border-blue-200 dark:border-blue-800' : 'hover:bg-white dark:hover:bg-[#1e1e1e] hover:shadow-md border-transparent'}`}>
+                        <img src={avatarUrl} alt="User" className="w-10 h-10 rounded-full border border-slate-200 dark:border-[#333] shadow-sm flex-shrink-0 object-cover" />
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={displayName}>
+                                {displayName}
+                            </h4>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                                {currentUser?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
+                            </p>
+                        </div>
+                        <ChevronUp size={18} className={`text-slate-400 transition-transform ${isUserMenuOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                    </div>
+                </div>
+            </aside>
+        </>
+    );
 }
