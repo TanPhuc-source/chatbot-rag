@@ -12,6 +12,7 @@ import AnalyticsPage from '@/pages/AnalyticsPage';
 import BotSettingsPage from '@/pages/BotSettingsPage';
 import LoginPage from '@/pages/LoginPage';
 import ProfilePage from '@/pages/ProfilePage';
+import UserProfilePage from '@/pages/UserProfilePage';
 import ChatPage from '@/pages/ChatPage';
 // Import trang Settings mới
 import SettingPage from '@/pages/SettingPage';
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/" element={<ChatPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="usersProfile" element={<UserProfilePage />} />
 
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
