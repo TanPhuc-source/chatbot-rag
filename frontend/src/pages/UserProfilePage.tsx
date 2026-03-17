@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Menu, Save, User, Mail, Shield, Clock, Camera, CheckCircle, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '@/components/shared/Sidebar'; // Sidebar của Chatbot
+import Sidebar from '@/components/shared/Sidebar';
 import { useAuthStore } from '@/store/authStore';
 
 interface UserProfile {
@@ -60,7 +60,7 @@ export default function UserProfilePage() {
         if (token) fetchProfile();
         else {
             setIsLoading(false);
-            navigate('/login'); // Chưa đăng nhập thì đẩy về trang login
+            navigate('/login');
         }
     }, [token, navigate]);
 
@@ -110,6 +110,7 @@ export default function UserProfilePage() {
             });
             setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : null);
             showToast('success', 'Đã cập nhật ảnh đại diện!');
+            init(); // Đồng bộ ngay với Sidebar
         } catch (err) {
             showToast('error', 'Lỗi khi tải ảnh lên. Vui lòng thử lại!');
         } finally {
@@ -122,7 +123,6 @@ export default function UserProfilePage() {
         setTimeout(() => setMessage(null), 3000);
     };
 
-    // Các biến Theme động
     const themeStyles = chatDarkMode ? {
         "--bg-base": "#050c16", "--bg-1": "#0d1b2a", "--bg-2": "#1b263b", "--bg-3": "#415a77",
         "--text-primary": "#f8fafc", "--text-secondary": "#e2e8f0", "--text-muted": "#94a3b8",
@@ -135,11 +135,13 @@ export default function UserProfilePage() {
 
     const displayName = profile?.full_name || profile?.username || 'User';
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${displayName}&background=0D8ABC&color=fff&size=256&bold=true`;
+
     const getAvatarSrc = () => {
         const url = profile?.avatar_url;
         if (!url) return fallbackAvatar;
-        if (url.startsWith('blob:')) return url;
-        return `http://127.0.0.1:8000${url}`;
+        if (url.startsWith('blob:') || url.startsWith('http')) return url;
+        const path = url.startsWith('/') ? url : `/${url}`;
+        return `http://127.0.0.1:8000${path}`;
     };
 
     if (isLoading) return <div style={{ ...themeStyles, background: "var(--bg-base)", color: "var(--text-primary)" }} className="flex h-screen w-screen items-center justify-center font-medium">Đang tải dữ liệu...</div>;
@@ -149,14 +151,16 @@ export default function UserProfilePage() {
 
             {/* ── Desktop sidebar ── */}
             <div className="hidden lg:flex h-full" style={{ position: "relative", zIndex: 10, flexShrink: 0 }}>
-                <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode} chatColor={chatColor} setChatColor={setChatColor} />
+                {/* Đã xóa các props theme thừa ở đây */}
+                <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
             </div>
 
             {/* ── Mobile sidebar overlay ── */}
             <div className="lg:hidden" style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: mobileOpen ? "auto" : "none" }}>
                 <div onClick={() => setMobileOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(5,12,22,0.55)", backdropFilter: "blur(4px)", opacity: mobileOpen ? 1 : 0, transition: "opacity 0.25s ease" }} />
                 <div style={{ position: "absolute", top: 0, left: 0, height: "100%", transform: mobileOpen ? "translateX(0)" : "translateX(-100%)", transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)" }}>
-                    <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode} chatColor={chatColor} setChatColor={setChatColor} />
+                    {/* Đã xóa các props theme thừa ở đây */}
+                    <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} />
                 </div>
             </div>
 

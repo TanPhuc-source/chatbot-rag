@@ -1,20 +1,19 @@
 import { useState, useEffect } from "react";
-import { Menu, Sparkles } from "lucide-react";
+import { Menu, Sparkles, Moon, Sun } from "lucide-react";
 import ChatWindow from "@/components/chat/ChatWindow";
 import Sidebar from "@/components/shared/Sidebar";
 import { useChatStore } from "@/store/chatStore";
 
 export default function ChatPage() {
   const { activeId } = useChatStore();
-  const [collapsed, setCollapsed] = useState(false);   // desktop: thu gọn
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile: mở drawer
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // LƯU Ý: Quản lý Theme Độc Lập cho Chatbot
   const [chatDarkMode, setChatDarkMode] = useState(() => {
     return localStorage.getItem("chat_theme_dark") === "true";
   });
   const [chatColor, setChatColor] = useState(() => {
-    return localStorage.getItem("chat_theme_color") || "#1a5fb4"; // Màu mặc định
+    return localStorage.getItem("chat_theme_color") || "#1a5fb4";
   });
 
   useEffect(() => {
@@ -22,7 +21,6 @@ export default function ChatPage() {
     localStorage.setItem("chat_theme_color", chatColor);
   }, [chatDarkMode, chatColor]);
 
-  // Sinh các biến CSS động dựa trên chế độ sáng/tối cục bộ của Chat
   const themeStyles = chatDarkMode ? {
     "--bg-base": "#050c16",
     "--bg-1": "#0d1b2a",
@@ -61,22 +59,13 @@ export default function ChatPage() {
         ...themeStyles
       }}
     >
-
       {/* ── Desktop sidebar ── */}
       <div className="hidden lg:flex h-full" style={{ position: "relative", zIndex: 10, flexShrink: 0 }}>
-        <Sidebar
-          collapsed={collapsed}
-          onToggle={() => setCollapsed(p => !p)}
-          chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode}
-          chatColor={chatColor} setChatColor={setChatColor}
-        />
+        <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
       </div>
 
       {/* ── Mobile sidebar: drawer overlay ── */}
-      <div
-        className="lg:hidden"
-        style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: mobileOpen ? "auto" : "none" }}
-      >
+      <div className="lg:hidden" style={{ position: "fixed", inset: 0, zIndex: 40, pointerEvents: mobileOpen ? "auto" : "none" }}>
         <div
           onClick={() => setMobileOpen(false)}
           style={{ position: "absolute", inset: 0, background: "rgba(5,12,22,0.55)", backdropFilter: "blur(4px)", opacity: mobileOpen ? 1 : 0, transition: "opacity 0.25s ease" }}
@@ -86,13 +75,7 @@ export default function ChatPage() {
           transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
         }}>
-          <Sidebar
-            collapsed={false}
-            onToggle={() => setMobileOpen(false)}
-            onClose={() => setMobileOpen(false)}
-            chatDarkMode={chatDarkMode} setChatDarkMode={setChatDarkMode}
-            chatColor={chatColor} setChatColor={setChatColor}
-          />
+          <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} onClose={() => setMobileOpen(false)} />
         </div>
       </div>
 
@@ -117,10 +100,15 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.18)" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 0 2px rgba(16,185,129,0.22)", display: "inline-block", animation: "pulse 2.5s ease infinite" }} />
-            <span className="hidden sm:inline" style={{ fontSize: 11, color: "#10b981", fontWeight: 500 }}>Đang hoạt động</span>
-          </div>
+          {/* ── NÚT ĐỔI CHẾ ĐỘ SÁNG/TỐI TẠI HEADER ── */}
+          <button
+            onClick={() => setChatDarkMode(!chatDarkMode)}
+            style={{ padding: 8, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}
+            className="hover:bg-[var(--bg-3)]"
+            title={chatDarkMode ? "Chuyển sang chế độ Sáng" : "Chuyển sang chế độ Tối"}
+          >
+            {chatDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-blue-500" />}
+          </button>
         </header>
 
         <ChatWindow />
