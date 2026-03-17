@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff,
-    CheckCircle, Mail, Phone, MapPin, Heart, X, Calendar
+    CheckCircle, Mail, Phone, MapPin, Heart, X, Calendar, LogIn
 } from 'lucide-react'
 import axios, { AxiosError } from 'axios'
 import logoImage from '../components/images/images.jpg';
@@ -169,6 +169,12 @@ export default function LoginPage() {
     const prevStep = () => {
         setCurrentStep(prev => prev - 1)
         setStatus(null)
+    }
+
+    const handleGuestLogin = () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        navigate('/');
     }
 
     return (
@@ -342,7 +348,7 @@ export default function LoginPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between pb-2">
                                                 <label className="flex items-center gap-2 cursor-pointer"></label>
                                                 <button type="button" className="text-sm text-sky-600 hover:text-sky-800 font-medium">
                                                     Quên mật khẩu?
@@ -373,6 +379,7 @@ export default function LoginPage() {
                                             exit="exit"
                                             className="space-y-4"
                                         >
+                                            {/* --- (Mã các step 1, 2 của bạn giữ nguyên, không thay đổi) --- */}
                                             {currentStep === 1 && (
                                                 <motion.div
                                                     key="step1"
@@ -570,7 +577,7 @@ export default function LoginPage() {
                                             )}
 
                                             {!isLoginMode && (
-                                                <div className="flex gap-3 pt-4">
+                                                <div className="flex gap-3 pt-4 pb-2">
                                                     {currentStep > 1 && (
                                                         <button
                                                             type="button"
@@ -611,13 +618,14 @@ export default function LoginPage() {
                                 </AnimatePresence>
                             </form>
 
+                            {/* --- Khu Vực Các Tùy Chọn Dưới Cùng --- */}
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
                                 className="mt-6 text-center"
                             >
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 mb-4">
                                     {isLoginMode ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
                                     <button
                                         onClick={toggleMode}
@@ -626,7 +634,23 @@ export default function LoginPage() {
                                         {isLoginMode ? "Đăng ký ngay" : "Đăng nhập"}
                                     </button>
                                 </p>
+
+                                <div className="relative flex items-center py-2 mb-4">
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                    <span className="flex-shrink-0 mx-4 text-xs text-gray-400 font-semibold tracking-wide">HOẶC</span>
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleGuestLogin}
+                                    className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-semibold text-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    Tiếp tục mà không cần đăng nhập
+                                    <ArrowRight size={16} className="opacity-70" />
+                                </button>
                             </motion.div>
+
                         </div>
                     </div>
                 </div>
