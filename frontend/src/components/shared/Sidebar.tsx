@@ -1,59 +1,72 @@
 import { useEffect, useState } from "react";
-import { Plus, MessageSquare, Trash2, Sparkles, User, ChevronLeft, LogIn, LogOut, Moon, Sun, Palette, ChevronUp } from "lucide-react";
+import { Plus, MessageSquare, Trash2, User, ChevronLeft, LogIn, LogOut, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
+import axios from "axios";
+
+// Đảm bảo đường dẫn này trỏ đúng đến file ảnh của bạn. 
+import logoImage from '../images/images.jpg';
+
+const SCHOOL_INFO = {
+  LOGO_URL: logoImage,
+  NAME: "Trường Đại Học Đồng Tháp",
+  DEPT: "Trung Tâm Ngoại Ngữ Và Tin Học"
+};
 
 interface Props {
   collapsed?: boolean;
   onToggle?: () => void;
   onClose?: () => void;
-  chatDarkMode?: boolean;
-  setChatDarkMode?: (val: boolean) => void;
-  chatColor?: string;
-  setChatColor?: (val: string) => void;
 }
 
-export default function Sidebar({ collapsed = false, onToggle, onClose, chatDarkMode, setChatDarkMode, chatColor, setChatColor }: Props) {
+export default function Sidebar({ collapsed = false, onToggle, onClose }: Props) {
   const { conversations, activeId, clearMessages, setActiveConversation } = useChatStore();
-
-  const { isLoggedIn, username, full_name, avatar_url, role, logout, init } = useAuthStore() as any;
+  const { isLoggedIn, logout, init } = useAuthStore() as any;
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => { init(); }, [init]);
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          const response = await axios.get('http://127.0.0.1:8000/auth/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setCurrentUser(response.data);
+        } catch (error) {
+          console.error("Lỗi lấy thông tin user:", error);
+        }
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const T = "0.28s cubic-bezier(0.4,0,0.2,1)";
+
   const handleNew = () => { clearMessages(); onClose?.(); };
   const handleSelect = (id: string) => { setActiveConversation(id); onClose?.(); };
   const handleLogout = () => {
     logout();
     clearMessages();
     setIsUserMenuOpen(false);
-    navigate("/");
+    window.location.reload();
   };
 
   const slideText = (extraStyle?: React.CSSProperties): React.CSSProperties => ({
     overflow: "hidden", whiteSpace: "nowrap", maxWidth: collapsed ? 0 : 999, opacity: collapsed ? 0 : 1, transition: `max-width ${T}, opacity ${T}`, ...extraStyle,
   });
 
-  // ── FIX: LOGIC LẤY ẢNH ĐẠI DIỆN AN TOÀN ──
-  const getAvatarSrc = () => {
-    if (avatar_url) {
-      if (avatar_url.startsWith('blob:') || avatar_url.startsWith('http')) {
-        return avatar_url;
-      }
-      // Tự động xử lý dấu "/" để tránh lỗi http://127.0.0.1:8000uploads/...
-      const path = avatar_url.startsWith('/') ? avatar_url : `/${avatar_url}`;
-      return `http://127.0.0.1:8000${path}`;
-    }
-    return "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png";
-  };
-
-  const avatarSrc = getAvatarSrc();
-  const displayName = full_name || username || "Tài khoản";
+  const displayName = currentUser?.full_name || currentUser?.username || "Tài khoản";
+  const avatarSrc = currentUser?.avatar_url
+    ? `http://127.0.0.1:8000${currentUser.avatar_url}`
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=0D8ABC&color=fff&bold=true`;
 
   return (
     <>
@@ -66,16 +79,28 @@ export default function Sidebar({ collapsed = false, onToggle, onClose, chatDark
         {/* ── Header ── */}
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: "16px 14px 14px", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", height: 40 }}>
-            <button onClick={onToggle} style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: "linear-gradient(135deg,#1a5fb4,#2a80d8)", boxShadow: "0 4px 14px rgba(26,95,180,0.3)", display: "flex", alignItems: "center", justifyContent: "center", border: "none", cursor: "pointer", padding: 0, transition: `all ${T}` }} className="hover:scale-105 active:scale-95">
-              <Sparkles size={18} color="white" />
-            </button>
+            {/* Nút Logo tròn */}
+            <div
+              onClick={onToggle}
+              style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, border: "2px solid var(--border)", overflow: "hidden", cursor: "pointer", padding: 2, background: "var(--bg-1)", transition: `all ${T}` }}
+              className="hover:scale-105 active:scale-95"
+              title="Thu gọn Sidebar"
+            >
+              <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+            </div>
 
-            <div style={slideText({ display: "flex", alignItems: "center", flex: 1, paddingLeft: 12 })}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p className="font-display" style={{ fontSize: 14, margin: 0, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>Trợ lý AI TTNN–TH</p>
-                <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 11, fontWeight: 500 }}>ĐH Đồng Tháp</p>
+            {/* Chữ hiển thị / ẩn đi khi thu gọn */}
+            <div style={slideText({ display: "flex", alignItems: "center", flex: 1, paddingLeft: 12, gap: 4 })}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <p className="font-display" style={{ fontSize: 11, margin: 0, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase" }}>
+                  {SCHOOL_INFO.NAME}
+                </p>
+                <p style={{ margin: "2px 0 0 0", color: "var(--brand)", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase" }}>
+                  {SCHOOL_INFO.DEPT}
+                </p>
               </div>
-              <button onClick={onToggle} style={{ flexShrink: 0, padding: 6, borderRadius: 8, border: "none", background: "var(--bg-2)", cursor: "pointer", color: "var(--text-muted)", display: "flex", transition: "all 0.2s" }} className="hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
+
+              <button onClick={onToggle} style={{ flexShrink: 0, padding: 6, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)", display: "flex", transition: "all 0.2s" }} className="hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]">
                 <ChevronLeft size={16} />
               </button>
             </div>
@@ -127,35 +152,10 @@ export default function Sidebar({ collapsed = false, onToggle, onClose, chatDark
 
         {/* ── Footer ── */}
         <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
-
-          {/* Menu Dropdown Popup */}
-          <div style={{ display: "flex", gap: 8, opacity: collapsed ? 0 : 1, transition: `opacity ${T}`, maxHeight: collapsed ? 0 : 40, overflow: "hidden" }}>
-            <button
-              onClick={() => setChatDarkMode?.(!chatDarkMode)}
-              style={{ width: "50%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 36, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-1)", color: "var(--text-secondary)", cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "all 0.2s" }}
-              className="hover:bg-[var(--bg-2)] hover:text-[var(--text-primary)]"
-            >
-              {chatDarkMode ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} className="text-blue-500" />}
-              {chatDarkMode ? "Sáng" : "Tối"}
-            </button>
-
-            <div style={{ width: "50%", display: "flex", alignItems: "center", justifyContent: "center", height: 36, padding: "0 10px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-1)", position: "relative", transition: "all 0.2s" }} className="hover:bg-[var(--bg-2)]">
-              <Palette size={15} color="var(--text-secondary)" style={{ position: "absolute", left: 10, pointerEvents: "none" }} />
-              <input
-                type="color"
-                value={chatColor || "#1a5fb4"}
-                onChange={e => setChatColor?.(e.target.value)}
-                style={{ width: 24, height: 24, opacity: 0, cursor: "pointer", padding: 0 }}
-                title="Đổi màu chủ đạo Chat"
-              />
-              <div style={{ width: 14, height: 14, borderRadius: "50%", background: chatColor || "#1a5fb4", marginLeft: 15, boxShadow: "0 0 0 1px rgba(0,0,0,0.1)", flexShrink: 0 }} />
-            </div>
-          </div>
-
           {/* Pop-up Info */}
           {isUserMenuOpen && (
             <div style={{ position: "absolute", bottom: "calc(100% - 10px)", left: 14, right: 14, background: "var(--bg-1)", borderRadius: 12, border: "1px solid var(--border)", boxShadow: "0 10px 25px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 50, padding: 6 }}>
-              {isLoggedIn ? (
+              {isLoggedIn || currentUser ? (
                 <>
                   <div onClick={() => { navigate("/usersProfile"); setIsUserMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", cursor: "pointer", borderRadius: 8, color: "var(--text-primary)", fontSize: 13, fontWeight: 500 }} className="hover:bg-[var(--bg-2)]">
                     <User size={16} color="var(--brand)" /> Thông tin tài khoản
@@ -181,21 +181,25 @@ export default function Sidebar({ collapsed = false, onToggle, onClose, chatDark
             className="hover:bg-[var(--bg-2)] hover:border-[var(--border)]"
           >
             <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-3)", color: "var(--text-secondary)", flexShrink: 0, overflow: "hidden", border: "1px solid var(--border)", transition: `all ${T}` }}>
-              {isLoggedIn ? (
-                <img src={avatarSrc} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+              {isLoggedIn || currentUser ? (
+                <img
+                  src={avatarSrc}
+                  alt="Avatar"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+                />
               ) : (
                 <User size={18} />
               )}
             </div>
 
             <div style={slideText({ paddingLeft: 12, flex: 1 })}>
-              {isLoggedIn ? (
+              {isLoggedIn || currentUser ? (
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</p>
                     <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }}></span>
-                      {role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
+                      {currentUser?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
                     </p>
                   </div>
                   <ChevronUp size={16} style={{ color: "var(--text-muted)", transition: "transform 0.2s", transform: isUserMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
@@ -211,7 +215,6 @@ export default function Sidebar({ collapsed = false, onToggle, onClose, chatDark
               )}
             </div>
           </div>
-
         </div>
       </aside>
     </>
