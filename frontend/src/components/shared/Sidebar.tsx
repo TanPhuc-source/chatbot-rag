@@ -26,6 +26,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // Thêm state quản lý modal đăng xuất
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
 
@@ -52,10 +53,12 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
 
   const handleNew = () => { clearMessages(); onClose?.(); };
   const handleSelect = (id: string) => { setActiveConversation(id); onClose?.(); };
+
   const handleLogout = () => {
     logout();
     clearMessages();
     setIsUserMenuOpen(false);
+    setShowLogoutConfirm(false); // Đóng modal
     window.location.reload();
   };
 
@@ -70,8 +73,35 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
 
   return (
     <>
+      {/* ── Overlay ẩn menu user ── */}
       {isUserMenuOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setIsUserMenuOpen(false)} />
+      )}
+
+      {/* ── Modal Xác Nhận Đăng Xuất ── */}
+      {showLogoutConfirm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(2px)" }}>
+          <div className="animate-slide-up" style={{ background: "var(--bg-1, #ffffff)", padding: 24, borderRadius: 16, width: "90%", maxWidth: 340, boxShadow: "0 10px 25px rgba(0,0,0,0.15)", border: "1px solid var(--border)" }}>
+            <h3 style={{ margin: "0 0 10px", fontSize: 18, color: "var(--text-primary)", fontWeight: 700 }}>Xác nhận đăng xuất</h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.5 }}>Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?</p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-primary)", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background 0.2s" }}
+                className="hover:bg-[var(--bg-2)]"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background 0.2s" }}
+                className="hover:bg-red-600"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <aside className="flex flex-col h-full shrink-0 relative z-50" style={{ width: collapsed ? 68 : 300, transition: `width ${T}`, overflow: "hidden", background: "var(--sb-bg)", borderRight: "1px solid var(--border)" }}>
@@ -79,7 +109,6 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         {/* ── Header ── */}
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: "16px 14px 14px", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", height: 40 }}>
-            {/* Nút Logo tròn */}
             <div
               onClick={onToggle}
               style={{ width: 40, height: 40, borderRadius: "50%", flexShrink: 0, border: "2px solid var(--border)", overflow: "hidden", cursor: "pointer", padding: 2, background: "var(--bg-1)", transition: `all ${T}` }}
@@ -89,7 +118,6 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
               <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
             </div>
 
-            {/* Chữ hiển thị / ẩn đi khi thu gọn */}
             <div style={slideText({ display: "flex", alignItems: "center", flex: 1, paddingLeft: 12, gap: 4 })}>
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <p className="font-display" style={{ fontSize: 11, margin: 0, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase" }}>
@@ -161,7 +189,8 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
                     <User size={16} color="var(--brand)" /> Thông tin tài khoản
                   </div>
                   <div style={{ height: 1, background: "var(--border)", margin: "4px 0", opacity: 0.6 }} />
-                  <div onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", cursor: "pointer", borderRadius: 8, color: "#ef4444", fontSize: 13, fontWeight: 500 }} className="hover:bg-red-500/10">
+                  {/* Sửa onClick tại đây để gọi state hiển thị modal */}
+                  <div onClick={() => { setIsUserMenuOpen(false); setShowLogoutConfirm(true); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", cursor: "pointer", borderRadius: 8, color: "#ef4444", fontSize: 13, fontWeight: 500 }} className="hover:bg-red-500/10">
                     <LogOut size={16} /> Đăng xuất
                   </div>
                 </>
