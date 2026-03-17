@@ -33,6 +33,7 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
     const navigate = useNavigate();
 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // State quản lý hiển thị Modal Đăng xuất
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
     useEffect(() => {
@@ -53,12 +54,11 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
     }, []);
 
     const handleLogout = () => {
-        const confirmed = window.confirm('Bạn có chắc chắn muốn đăng xuất?');
-        if (confirmed) {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('user_role');
-            navigate('/login');
-        }
+        // Thực hiện đăng xuất khi người dùng bấm Xác nhận trong Modal
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_role');
+        setShowLogoutConfirm(false);
+        navigate('/login');
     };
 
     const handleProfileClick = () => {
@@ -91,11 +91,40 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
 
     return (
         <>
+            {/* Overlay cho Mobile */}
             {isMobileOpen && (
                 <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
             )}
+
+            {/* Overlay cho Menu User */}
             {isUserMenuOpen && (
                 <div className="fixed inset-0 z-40" onClick={() => setIsUserMenuOpen(false)} />
+            )}
+
+            {/* ── Modal Xác Nhận Đăng Xuất ── */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+                    <div className="bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl w-[90%] max-w-[340px] shadow-2xl border border-slate-200 dark:border-[#333] transform transition-all duration-300 animate-in fade-in zoom-in-95">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">Xác nhận đăng xuất</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+                            Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này không?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="px-4 py-2 rounded-lg border border-slate-200 dark:border-[#444] text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-[#2a2a2a] transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="px-4 py-2 rounded-lg bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors shadow-md shadow-red-200 dark:shadow-none"
+                            >
+                                Đăng xuất
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             <aside className={`
@@ -142,7 +171,8 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
                                 <span className="text-sm font-medium">Thông tin tài khoản</span>
                             </div>
                             <div className="h-[1px] bg-slate-100 dark:bg-[#333] mx-3"></div>
-                            <div onClick={handleLogout} className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer text-red-600 dark:text-red-400">
+                            {/* Chỉnh sửa sự kiện onClick tại đây để gọi Modal */}
+                            <div onClick={() => { setIsUserMenuOpen(false); setShowLogoutConfirm(true); }} className="flex items-center gap-3 p-3 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer text-red-600 dark:text-red-400">
                                 <LogOut size={16} />
                                 <span className="text-sm font-medium">Đăng xuất</span>
                             </div>
