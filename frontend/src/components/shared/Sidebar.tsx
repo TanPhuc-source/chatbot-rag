@@ -104,8 +104,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         </div>
       )}
 
-      <aside className="flex flex-col h-full shrink-0 relative z-50" style={{ width: collapsed ? 68 : 300, transition: `width ${T}`, overflow: "hidden", background: "var(--sb-bg)", borderRight: "1px solid var(--border)" }}>
-
+      <aside className="flex flex-col h-full shrink-0 relative z-50" style={{ width: collapsed ? 68 : 300, transition: `width ${T}`, overflow: "visible", background: "var(--sb-bg)", borderRight: "1px solid var(--border)" }}>
         {/* ── Header ── */}
         <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: "16px 14px 14px", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", height: 40 }}>
@@ -182,7 +181,24 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12, position: "relative" }}>
           {/* Pop-up Info */}
           {isUserMenuOpen && (
-            <div style={{ position: "absolute", bottom: "calc(100% - 10px)", left: 14, right: 14, background: "var(--bg-1)", borderRadius: 12, border: "1px solid var(--border)", boxShadow: "0 10px 25px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 50, padding: 6 }}>
+            <div style={{
+              position: "absolute",
+              // Nếu thu gọn, đặt nó ngang hàng với nút. Nếu mở rộng, đặt lên trên.
+              bottom: collapsed ? 16 : "calc(100% - 10px)",
+              // Nếu thu gọn, đẩy sang phải văng ra ngoài. Nếu mở rộng, cách lề trái 14px.
+              left: collapsed ? "calc(100% + 10px)" : 14,
+              // Hủy lề phải khi thu gọn
+              right: collapsed ? "auto" : 14,
+              // Đặt chiều rộng cố định 220px khi thu gọn
+              width: collapsed ? 220 : "auto",
+              background: "var(--bg-1)",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+              overflow: "hidden",
+              zIndex: 50,
+              padding: 6
+            }}>
               {isLoggedIn || currentUser ? (
                 <>
                   <div onClick={() => { navigate("/usersProfile"); setIsUserMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", cursor: "pointer", borderRadius: 8, color: "var(--text-primary)", fontSize: 13, fontWeight: 500 }} className="hover:bg-[var(--bg-2)]">
