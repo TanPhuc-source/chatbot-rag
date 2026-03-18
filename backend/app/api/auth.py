@@ -208,7 +208,7 @@ def forgot_password(
 ):
     user = db.query(models.User).filter(models.User.email == request.email).first()
     if not user:
-        return {"message": "Nếu email tồn tại, link khôi phục đã được gửi."}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy người dùng với email này")
     
     settings = get_settings()
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -217,7 +217,7 @@ def forgot_password(
     
     background_tasks.add_task(send_reset_email, user.email, reset_token)
     
-    return {"message": "Nếu email tồn tại, link khôi phục đã được gửi."}
+    return {"message": "Hãy kiểm tra email của bạn để nhận hướng dẫn đặt lại mật khẩu"}
 
 
 @router.post("/reset-password")
