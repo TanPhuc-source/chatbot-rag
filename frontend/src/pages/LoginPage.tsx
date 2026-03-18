@@ -196,12 +196,13 @@ export default function LoginPage() {
                         >
                             <button
                                 onClick={() => setStatus(null)}
-                                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 bg-slate-50 p-1.5 rounded-full"
+                                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 bg-slate-50 p-1.5 rounded-full transition-colors"
                             >
                                 <X size={18} />
                             </button>
 
-                            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${status.success ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                            {/* Đổi màu icon: Thành công -> Xanh dương (blue/sky), Lỗi -> Đỏ (rose) */}
+                            <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${status.success ? 'bg-sky-100 text-sky-600' : 'bg-rose-100 text-rose-600'}`}>
                                 {status.success ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
                             </div>
 
@@ -213,9 +214,10 @@ export default function LoginPage() {
                                 {status.message}
                             </p>
 
+                            {/* Đổi màu nút bấm: Thành công -> Xanh dương, Lỗi -> Đỏ */}
                             <button
                                 onClick={() => setStatus(null)}
-                                className={`w-full py-2.5 rounded-xl font-bold text-white transition-all shadow-md active:scale-95 ${status.success ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'bg-sky-600 hover:bg-sky-700 shadow-sky-200'}`}
+                                className={`w-full py-2.5 rounded-xl font-bold text-white transition-all shadow-md active:scale-95 ${status.success ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-200' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-200'}`}
                             >
                                 {status.success ? 'Đang xử lý...' : 'Đóng'}
                             </button>
@@ -230,7 +232,7 @@ export default function LoginPage() {
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="bg-white/90 backdrop-blur-xl w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20"
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[550px] lg:min-h-[600px]">
 
                     <div className="hidden lg:flex flex-col items-center justify-center p-12 bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#312e81] text-white text-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.dthu.edu.vn/images/slider/02.jpg')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
@@ -255,7 +257,8 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <div className="p-8 lg:p-12 bg-white flex flex-col justify-center">
+                    {/* Đã thêm max-h-[100vh] và custom-scrollbar để cuộn mượt nếu form quá dài */}
+                    <div className="p-6 lg:p-12 bg-white flex flex-col justify-center max-h-[100vh] overflow-y-auto custom-scrollbar">
                         <div className="max-w-md mx-auto w-full">
 
                             <div className="lg:hidden flex justify-center mb-6">
@@ -264,14 +267,14 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-8">
+                            <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-6">
                                 <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
                                     {isLoginMode ? 'Đăng Nhập' : 'Tạo Tài Khoản'}
                                 </h2>
                             </motion.div>
 
                             {!isLoginMode && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-8">
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
                                     <div className="flex items-center w-full mb-2">
                                         {[1, 2].map((step, index) => (
                                             <React.Fragment key={step}>
@@ -350,7 +353,11 @@ export default function LoginPage() {
 
                                             <div className="flex items-center justify-between pb-2">
                                                 <label className="flex items-center gap-2 cursor-pointer"></label>
-                                                <button type="button" className="text-sm text-sky-600 hover:text-sky-800 font-medium">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate('/forgot-password')}
+                                                    className="text-sm text-sky-600 hover:text-sky-800 font-medium"
+                                                >
                                                     Quên mật khẩu?
                                                 </button>
                                             </div>
@@ -379,7 +386,6 @@ export default function LoginPage() {
                                             exit="exit"
                                             className="space-y-4"
                                         >
-                                            {/* --- (Mã các step 1, 2 của bạn giữ nguyên, không thay đổi) --- */}
                                             {currentStep === 1 && (
                                                 <motion.div
                                                     key="step1"
@@ -577,7 +583,7 @@ export default function LoginPage() {
                                             )}
 
                                             {!isLoginMode && (
-                                                <div className="flex gap-3 pt-4 pb-2">
+                                                <div className="flex gap-3 pt-3 pb-2">
                                                     {currentStep > 1 && (
                                                         <button
                                                             type="button"
@@ -623,11 +629,12 @@ export default function LoginPage() {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="mt-6 text-center"
+                                className="mt-4 text-center"
                             >
-                                <p className="text-sm text-gray-500 mb-4">
+                                <p className="text-sm text-gray-500 mb-2">
                                     {isLoginMode ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
                                     <button
+                                        type="button"
                                         onClick={toggleMode}
                                         className="font-semibold text-sky-600 hover:text-sky-800 hover:underline transition-all"
                                     >
@@ -635,20 +642,25 @@ export default function LoginPage() {
                                     </button>
                                 </p>
 
-                                <div className="relative flex items-center py-2 mb-4">
-                                    <div className="flex-grow border-t border-gray-200"></div>
-                                    <span className="flex-shrink-0 mx-4 text-xs text-gray-400 font-semibold tracking-wide">HOẶC</span>
-                                    <div className="flex-grow border-t border-gray-200"></div>
-                                </div>
+                                {/* Chặn điều kiện: Cụm 'Khách' chỉ hiện khi đang ở form Đăng nhập */}
+                                {isLoginMode && (
+                                    <>
+                                        <div className="relative flex items-center py-3">
+                                            <div className="flex-grow border-t border-gray-200"></div>
+                                            <span className="flex-shrink-0 mx-4 text-xs text-gray-400 font-semibold tracking-wide">HOẶC</span>
+                                            <div className="flex-grow border-t border-gray-200"></div>
+                                        </div>
 
-                                <button
-                                    type="button"
-                                    onClick={handleGuestLogin}
-                                    className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-semibold text-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                >
-                                    Tiếp tục mà không cần đăng nhập
-                                    <ArrowRight size={16} className="opacity-70" />
-                                </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleGuestLogin}
+                                            className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-semibold text-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        >
+                                            Tiếp tục mà không cần đăng nhập
+                                            <ArrowRight size={16} className="opacity-70" />
+                                        </button>
+                                    </>
+                                )}
                             </motion.div>
 
                         </div>
@@ -670,6 +682,21 @@ export default function LoginPage() {
                 }
                 .animation-delay-4000 {
                     animation-delay: 4s;
+                }
+                
+                /* Ẩn thanh cuộn mặc định để giao diện không bị xấu khi màn hình thấp */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: #cbd5e1;
+                    border-radius: 20px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background-color: #94a3b8;
                 }
             `}</style>
         </div>
