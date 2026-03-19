@@ -43,66 +43,62 @@ function FeedbackButtons({ messageId }: { messageId: number }) {
   const [isLoading, setIsLoading] = useState(false);
 
   const submit = async (r: "up" | "down") => {
-    if (isLoading) return;
+    // Cho phép đổi rating, chỉ block khi đang load hoặc nhấn lại đúng rating
+    if (isLoading || rating === r) return;
     setIsLoading(true);
     try {
-      await fetch(`http://127.0.0.1:8000/feedback/${messageId}`, {
+      const res = await fetch(`http://127.0.0.1:8000/feedback/${messageId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating: r }),
       });
-      setRating(r);
+      if (res.ok) setRating(r);
     } catch { }
     finally {
       setIsLoading(false);
     }
   };
 
+  const btnStyle = (r: "up" | "down") => ({
+    display: "flex" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    border: rating === r
+      ? `1px solid ${r === "up" ? "#86efac" : "#fca5a5"}`
+      : "1px solid var(--border)",
+    cursor: (isLoading || rating === r) ? "default" as const : "pointer" as const,
+    transition: "all 0.15s ease",
+    flexShrink: 0 as const,
+    background: rating === r
+      ? (r === "up" ? "#dcfce7" : "#fee2e2")
+      : "var(--bg-3)",
+    color: rating === r
+      ? (r === "up" ? "#16a34a" : "#dc2626")
+      : "var(--text-muted)",
+    opacity: isLoading ? 0.6 : 1,
+    transform: rating === r ? "scale(1.1)" : "scale(1)",
+  });
+
   return (
     <div style={{ display: "flex", gap: 6 }}>
       <button
         onClick={() => submit("up")}
-        title="Hữu ích"
+        title={rating === "up" ? "Đã đánh giá hữu ích" : "Hữu ích"}
         disabled={isLoading}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 30,
-          height: 30,
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          cursor: rating ? "default" : "pointer",
-          transition: "all 0.15s ease",
-          flexShrink: 0,
-          background: rating === "up" ? "#dcfce7" : "var(--bg-3)",
-          color: rating === "up" ? "#16a34a" : "var(--text-muted)",
-          opacity: isLoading ? 0.6 : 1,
-        }}
-        className={!rating ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
+        style={btnStyle("up")}
+        className={rating !== "up" ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
       >
         <ThumbsUp size={12} />
       </button>
       <button
         onClick={() => submit("down")}
-        title="Không hữu ích"
+        title={rating === "down" ? "Đã đánh giá không hữu ích" : "Không hữu ích"}
         disabled={isLoading}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 30,
-          height: 30,
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          cursor: rating ? "default" : "pointer",
-          transition: "all 0.15s ease",
-          flexShrink: 0,
-          background: rating === "down" ? "#fee2e2" : "var(--bg-3)",
-          color: rating === "down" ? "#dc2626" : "var(--text-muted)",
-          opacity: isLoading ? 0.6 : 1,
-        }}
-        className={!rating ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
+        style={btnStyle("down")}
+        className={rating !== "down" ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
       >
         <ThumbsDown size={12} />
       </button>
