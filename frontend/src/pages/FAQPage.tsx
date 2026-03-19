@@ -54,7 +54,7 @@ export default function FAQPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const itemsPerPage = 5;
 
     const [showModal, setShowModal] = useState(false);
     const [editFaq, setEditFaq] = useState<FAQ | null>(null);
@@ -123,6 +123,7 @@ export default function FAQPage() {
             addToast(editFaq ? 'Đã cập nhật FAQ' : 'Đã thêm FAQ mới');
             setShowModal(false);
             fetchFaqs();
+            if (!editFaq) setCurrentPage(9999); // sẽ được clamp về totalPages trong render
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsSaving(false); }
     };
@@ -131,7 +132,13 @@ export default function FAQPage() {
         try {
             const res = await fetch(`${API}/faq/admin/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) throw new Error('Xóa thất bại');
-            setFaqs(prev => prev.filter(f => f.id !== id));
+            setFaqs(prev => {
+                const next = prev.filter(f => f.id !== id);
+                // Nếu trang hiện tại không còn item → về trang trước
+                const newTotalPages = Math.max(1, Math.ceil(next.length / 5));
+                setCurrentPage(p => Math.min(p, newTotalPages));
+                return next;
+            });
             addToast('Đã xóa FAQ', 'info');
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setConfirmDeleteId(null); }
@@ -153,8 +160,10 @@ export default function FAQPage() {
             f.answer.toLowerCase().includes(searchTerm.toLowerCase());
         return matchCat && matchSearch;
     });
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
-    const currentItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+    // Clamp currentPage — tự điều chỉnh nếu trang hiện tại vượt quá tổng số trang
+    const safePage = Math.min(currentPage, totalPages);
+    const currentItems = filtered.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
 
     return (
         <>
@@ -506,16 +515,16 @@ export default function FAQPage() {
                                                                     </div>
                                                                 </div>
                                                                 {/* Actions */}
-                                                                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="flex items-center gap-1.5 shrink-0">
                                                                     <button onClick={() => handleToggle(faq.id)}
-                                                                        className={`p-2 rounded-xl transition-colors ${faq.is_active ? 'text-slate-300 dark:text-slate-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-slate-300 dark:text-slate-500 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30'}`}>
-                                                                        {faq.is_active ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                        className={`p-2 rounded-xl transition-colors ${faq.is_active ? 'text-slate-400 dark:text-slate-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30' : 'text-slate-400 dark:text-slate-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30'}`}>
+                                                                        {faq.is_active ? <EyeOff size={15} /> : <Eye size={15} />}
                                                                     </button>
-                                                                    <button onClick={() => openEdit(faq)} className="p-2 rounded-xl text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                                                                        <Edit2 size={14} />
+                                                                    <button onClick={() => openEdit(faq)} className="p-2 rounded-xl text-slate-400 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                                                                        <Edit2 size={15} />
                                                                     </button>
-                                                                    <button onClick={() => setConfirmDeleteId(faq.id)} className="p-2 rounded-xl text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                                                                        <Trash2 size={14} />
+                                                                    <button onClick={() => setConfirmDeleteId(faq.id)} className="p-2 rounded-xl text-slate-400 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                                                                        <Trash2 size={15} />
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -533,7 +542,7 @@ export default function FAQPage() {
                                 <div className="flex items-center justify-between px-1 pt-3 pb-2">
                                     <p className="text-xs text-slate-400 dark:text-slate-500">
                                         Hiển thị <span className="font-semibold text-slate-600 dark:text-slate-300">
-                                            {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}
+                                            {(safePage - 1) * itemsPerPage + 1}–{Math.min(safePage * itemsPerPage, filtered.length)}
                                         </span> / <span className="font-semibold text-slate-600 dark:text-slate-300">{filtered.length}</span> FAQ
                                     </p>
                                     {totalPages > 1 && (
@@ -558,7 +567,7 @@ export default function FAQPage() {
                                                         <span key={`e-${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-slate-400">…</span>
                                                     ) : (
                                                         <button key={p} onClick={() => setCurrentPage(p as number)}
-                                                            className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === currentPage ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                                                            className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${p === safePage ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
                                                             {p}
                                                         </button>
                                                     )

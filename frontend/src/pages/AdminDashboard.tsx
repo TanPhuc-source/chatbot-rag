@@ -421,7 +421,7 @@ export default function AdminDashboard() {
                                     <span className="hidden sm:block w-28 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Người dùng</span>
                                     <span className="hidden md:block w-20 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 text-center">Tin nhắn</span>
                                     <span className="hidden lg:block w-36 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Thời gian</span>
-                                    <span className="w-16 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 text-right">Hành động</span>
+                                    <span className="w-20 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500 text-right">Hành động</span>
                                 </div>
                             )}
 
@@ -500,16 +500,16 @@ export default function AdminDashboard() {
                                                 </div>
 
                                                 {/* Actions */}
-                                                <div className="w-16 flex justify-end items-center gap-1 shrink-0">
+                                                <div className="w-20 flex justify-end items-center gap-1.5 shrink-0">
                                                     <button onClick={() => openPreview(session)}
-                                                        className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                                                        className="p-2 rounded-lg text-slate-400 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all"
                                                         title="Xem hội thoại">
-                                                        <Eye size={14} />
+                                                        <Eye size={15} />
                                                     </button>
                                                     <button onClick={() => setConfirmDeleteId(session.id)}
-                                                        className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                                                        className="p-2 rounded-lg text-slate-400 dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/30 transition-all"
                                                         title="Xóa phiên chat">
-                                                        <Trash2 size={14} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </div>
                                             </div>

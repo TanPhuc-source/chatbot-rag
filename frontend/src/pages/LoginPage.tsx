@@ -101,7 +101,7 @@ export default function LoginPage() {
                 setStatus({ success: true, message: 'Đăng nhập thành công! Đang chuyển hướng...' })
 
                 setTimeout(() => {
-                    if (role === 'admin') navigate('/admin');
+                    if (role === 'admin') navigate('/admin/analytics');
                     else navigate('/');
                 }, 1200)
 
