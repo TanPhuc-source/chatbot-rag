@@ -127,9 +127,14 @@ export default function FeedbackPage() {
         finally { setIsLoadingNoFb(false); }
     }, [token, addToast]);
 
+    // Fetch khi chuyển tab hoặc lần đầu load (để badge count đúng ngay)
     useEffect(() => {
         if (activeTab === 'no-feedback') fetchNoFeedback();
     }, [activeTab, fetchNoFeedback]);
+
+    useEffect(() => {
+        fetchNoFeedback();
+    }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleDelete = async (id: number) => {
         setIsDeleting(true);
@@ -735,21 +740,20 @@ export default function FeedbackPage() {
                                                 </div>
 
                                                 {/* Actions */}
-                                                <div className="w-20 flex justify-end items-center gap-1 shrink-0">
-                                                    {/* Tạo FAQ — chỉ hiện với feedback tiêu cực hoặc khi có câu hỏi */}
+                                                <div className="w-24 flex justify-end items-center gap-1.5 shrink-0">
                                                     {item.question && (
                                                         <button
                                                             onClick={e => { e.stopPropagation(); openFaqModal(item); }}
-                                                            className="p-1.5 rounded-lg text-slate-300 dark:text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 opacity-0 group-hover:opacity-100 transition-all"
+                                                            className="p-2 rounded-lg text-slate-400 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/30 transition-all"
                                                             title="Tạo FAQ từ câu hỏi này">
-                                                            <BookOpen size={14} />
+                                                            <BookOpen size={15} />
                                                         </button>
                                                     )}
                                                     <button
                                                         onClick={e => { e.stopPropagation(); setConfirmDeleteId(item.id); }}
-                                                        className="p-1.5 rounded-lg text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all opacity-0 group-hover:opacity-100"
+                                                        className="p-2 rounded-lg text-slate-400 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
                                                         title="Xóa">
-                                                        <Trash2 size={14} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -860,12 +864,12 @@ export default function FeedbackPage() {
                                                             )}
                                                         </div>
                                                         {/* Action */}
-                                                        <div className="w-20 flex justify-end items-center shrink-0">
+                                                        <div className="w-24 flex justify-end items-center shrink-0">
                                                             <button
                                                                 onClick={() => openFaqModal({ id: 0, message_id: item.message_id, rating: 'down', comment: null, created_at: item.created_at, question: item.question, answer: item.answer, session_title: item.session_title })}
-                                                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/40 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 opacity-0 group-hover:opacity-100 transition-all"
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/40 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all"
                                                                 title="Tạo FAQ từ câu hỏi này">
-                                                                <BookOpen size={12} /> Tạo FAQ
+                                                                <BookOpen size={13} /> Tạo FAQ
                                                             </button>
                                                         </div>
                                                     </div>
