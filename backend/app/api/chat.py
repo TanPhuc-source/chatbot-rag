@@ -24,7 +24,7 @@ from app.db.database import get_db
 from app.db import models
 from app.services.chat_service import chat, stream_chat
 from app.utils.logger import logger
-
+from app.api import schemas
 router = APIRouter()
 
 oauth2_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
@@ -116,3 +116,65 @@ async def stream_endpoint(
             "X-Accel-Buffering": "no",
         },
     )
+
+router.get("/sessions", response_model=list[schemas.ChatSessionResponse])
+def get_user_sessions(
+    current_user: models.User = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Lấy danh sách các cuộc trò chuyện của user đang đăng nhập."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập để xem lịch sử")
+    
+    sessions = db.query(models.ChatSession)\
+                 .filter(models.ChatSession.user_id == current_user.id)\
+                 .order_by(models.ChatSession.created_at.desc())\
+                 .all()
+    return sessions
+
+@router.get("/sessions/{session_id}/messages", response_model=list[schemas.ChatMessageResponse])
+def get_session_messages(
+    session_id: str,
+    current_user: models.User = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Khôi phục nội dung tin nhắn của một cuộc trò chuyện cụ thể."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
+        
+    # Xác thực session thuộc về user này
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cuộc trò chuyện")
+
+    messages = db.query(models.ChatMessage)\
+                 .filter(models.ChatMessage.session_id == session_id)\
+                 .order_by(models.ChatMessage.created_at.asc())\
+                 .all()
+    return messages
+
+@router.delete("/sessions/{session_id}")
+def delete_session(
+    session_id: str,
+    current_user: models.User = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    """Xóa một cuộc trò chuyện."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
+        
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Không tìm thấy cuộc trò chuyện")
+
+    db.delete(session)
+    db.commit()
+    return {"message": "Đã xóa cuộc trò chuyện thành công"}
