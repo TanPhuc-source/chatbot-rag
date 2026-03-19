@@ -6,7 +6,7 @@ import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 export default function ResetPasswordPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token'); // Lấy token từ URL
+    const token = searchParams.get('token');
 
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,7 +16,8 @@ export default function ResetPasswordPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (newPassword !== confirmPassword) {
-            setStatus({ success: false, message: 'Mật khẩu xác nhận không khớp!' });
+            // Cập nhật thông báo thân thiện
+            setStatus({ success: false, message: 'Mật khẩu xác nhận chưa khớp mất rồi, bạn gõ lại cẩn thận nhé!' });
             return;
         }
 
@@ -28,10 +29,12 @@ export default function ResetPasswordPage() {
                 token: token,
                 new_password: newPassword
             });
-            setStatus({ success: true, message: 'Đặt lại mật khẩu thành công! Chuyển hướng về đăng nhập...' });
+            // Cập nhật thông báo thân thiện
+            setStatus({ success: true, message: 'Tuyệt vời! Đổi mật khẩu thành công. Đang đưa bạn về trang đăng nhập nhé...' });
             setTimeout(() => navigate('/login'), 2500);
         } catch (error: any) {
-            const errorMsg = error.response?.data?.detail || 'Token không hợp lệ hoặc đã hết hạn!';
+            // Cập nhật thông báo lỗi thân thiện
+            const errorMsg = error.response?.data?.detail || 'Đường link này không hợp lệ hoặc đã hết hạn mất rồi. Bạn vui lòng gửi yêu cầu lại nhé!';
             setStatus({ success: false, message: errorMsg });
         } finally {
             setIsLoading(false);
@@ -41,16 +44,16 @@ export default function ResetPasswordPage() {
     if (!token) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 text-center p-4">
-                <p className="text-rose-500 font-medium bg-rose-50 p-4 rounded-xl">Đường dẫn không hợp lệ. Thiếu token xác thực.</p>
+                <p className="text-rose-500 font-medium bg-rose-50 p-4 rounded-xl">Đường link có vẻ chưa đúng hoặc thiếu mã xác thực mất rồi.</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 via-indigo-50 to-purple-50 p-4 font-sans">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 font-sans">
             <div className="bg-white/90 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl p-8 border border-white/20">
                 <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">Tạo Mật Khẩu Mới</h2>
-                <p className="text-sm text-gray-500 text-center mb-8">Vui lòng nhập mật khẩu mới cho tài khoản của bạn.</p>
+                <p className="text-sm text-gray-500 text-center mb-8">Cùng tạo một mật khẩu thật an toàn và dễ nhớ cho tài khoản của bạn nhé!</p>
 
                 {status && (
                     <div className={`p-4 rounded-xl mb-6 flex items-start gap-3 ${status.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
@@ -69,7 +72,8 @@ export default function ResetPasswordPage() {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 minLength={6}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 transition-all"
+                                placeholder="Nhập ít nhất 6 ký tự..."
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all"
                                 required
                             />
                         </div>
@@ -83,15 +87,17 @@ export default function ResetPasswordPage() {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 minLength={6}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 transition-all"
+                                placeholder="Nhập lại mật khẩu ở trên..."
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all"
                                 required
                             />
                         </div>
                     </div>
+                    {/* Đã sửa màu nút thành xanh dương (bg-blue-600) */}
                     <button
                         type="submit"
                         disabled={isLoading || !newPassword || !confirmPassword}
-                        className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3 rounded-xl font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold text-sm shadow-lg shadow-blue-200 hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                     >
                         {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Đổi mật khẩu'}
                     </button>
