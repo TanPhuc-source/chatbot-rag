@@ -72,6 +72,15 @@ class ChatSessionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# Thêm schema cho chi tiết tin nhắn
+class ChatMessageResponse(BaseModel):
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+        
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 

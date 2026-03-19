@@ -20,6 +20,9 @@ interface ChatState {
   // async helpers
   loadHistory: (token: string) => Promise<void>;
   selectConversation: (id: string, token: string) => Promise<void>;
+
+  // Thêm hàm deleteConversation vào interface
+  deleteConversation: (id: string, token: string) => Promise<void>;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -83,5 +86,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }));
       set({ messages: msgs });
     } catch { /* silent fail */ }
+  },
+  // Thêm hàm deleteConversation vào cuối
+  deleteConversation: async (id: string, token: string) => {
+    try {
+      const res = await fetch(`${API}/history/sessions/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      // Cập nhật lại UI sau khi xóa thành công
+      const { conversations, activeId } = get();
+      const updated = conversations.filter((c) => c.id !== id);
+      set({ conversations: updated });
+
+      // Nếu cuộc trò chuyện đang mở bị xóa, clear màn hình
+      if (activeId === id) {
+        set({ activeId: null, messages: [] });
+      }
+    } catch {
+      console.error("Lỗi khi xóa cuộc trò chuyện");
+    }
   },
 }));

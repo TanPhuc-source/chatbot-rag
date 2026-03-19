@@ -31,8 +31,17 @@ interface Props {
 }
 
 export default function Sidebar({ collapsed = false, onToggle, onClose }: Props) {
-  const { conversations, activeId, clearMessages, setActiveConversation } =
-    useChatStore();
+  // const { conversations, activeId, clearMessages, setActiveConversation } =
+  //   useChatStore();
+  const {
+    conversations,
+    activeId,
+    clearMessages,
+    loadHistory,
+    selectConversation,
+    deleteConversation
+  } = useChatStore();
+
   const { isLoggedIn, logout, init } = useAuthStore() as any;
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -54,13 +63,15 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
             headers: { Authorization: `Bearer ${token}` },
           });
           setCurrentUser(response.data);
+          loadHistory(token); // Tải lịch sử cuộc trò chuyện sau khi lấy được thông tin người dùng
+
         } catch (error) {
           console.error("Lỗi lấy thông tin user:", error);
         }
       }
     };
     fetchUserData();
-  }, []);
+  }, [loadHistory]);
 
   const T = "0.28s cubic-bezier(0.4,0,0.2,1)";
 
@@ -68,8 +79,12 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
     clearMessages();
     onClose?.();
   };
+  // Sửa lại hàm handleSelect
   const handleSelect = (id: string) => {
-    setActiveConversation(id);
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      selectConversation(id, token); // Gọi hàm khôi phục tin nhắn từ DB
+    }
     onClose?.();
   };
 
@@ -359,7 +374,14 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
                 {hoveredId === conv.id && (
                   <button
                     className="flex items-center justify-center p-1.5 rounded-md text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 bg-transparent border-none cursor-pointer transition-colors"
-                    onClick={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // --- THÊM LOGIC XÓA Ở ĐÂY ---
+                      const token = localStorage.getItem("access_token");
+                      if (token) {
+                        deleteConversation(conv.id, token);
+                      }
+                    }}
                   >
                     <Trash2 size={16} />
                   </button>
