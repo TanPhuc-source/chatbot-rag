@@ -7,7 +7,7 @@ import {
     BrainCircuit, Search, Menu, X, XCircle,
     ChevronLeft, ChevronRight,
     LogOut, Layers, Clock, AlertTriangle, Info,
-    Eye, BookOpen, Hash, BookMarked, Download
+    Eye, BookOpen, Hash, BookMarked, Download, Edit3
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -701,8 +701,8 @@ export default function AdminRecordsPage() {
                                         <span className="w-10 shrink-0">Loại</span>
                                         <span className="flex-1">Tên tài liệu</span>
                                         <span className="hidden sm:block w-28 text-center">Trạng thái</span>
-                                        <span className="hidden md:block w-36">Ngày tải</span>
-                                        <span className="w-24 text-center">Thao tác</span>
+                                        <span className="hidden lg:block w-36">Ngày tải</span>
+                                        <span className="w-40 text-right pr-1">Thao tác</span>
                                     </div>
                                 )}
 
@@ -769,33 +769,40 @@ export default function AdminRecordsPage() {
                                                     </div>
 
                                                     {/* Date */}
-                                                    <div className="hidden md:flex items-center gap-1.5 w-36 text-xs text-slate-400 dark:text-slate-500 shrink-0">
+                                                    <div className="hidden lg:flex items-center gap-1.5 w-36 text-xs text-slate-400 dark:text-slate-500 shrink-0">
                                                         <Clock size={12} className="shrink-0" />
                                                         <span className="truncate">{doc.uploadedAt}</span>
                                                     </div>
 
                                                     {/* Actions */}
-                                                    <div className="w-16 flex justify-end items-center gap-1 shrink-0">
+                                                    <div className="w-40 flex justify-end items-center shrink-0">
                                                         <button
                                                             onClick={() => handleDownloadOriginal(doc)}
-                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            className="p-1 text-slate-300 dark:text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                             title="Tải file gốc"
                                                         >
-                                                            <Download size={16} />
+                                                            <Download size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => navigate(`/admin/records/${doc.id}/chunks`)}
+                                                            className="p-1 text-slate-300 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            title="Sửa chunks"
+                                                        >
+                                                            <Edit3 size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => openPreview(doc)}
-                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            className="p-1 text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                             title="Xem nội dung chunks"
                                                         >
-                                                            <Eye size={16} />
+                                                            <Eye size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => setConfirmDeleteId(doc.id)}
-                                                            className="p-2 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                            className="p-1 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                                                             title="Xóa tài liệu"
                                                         >
-                                                            <Trash2 size={16} />
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </div>
                                                 </div>

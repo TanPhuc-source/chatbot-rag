@@ -9,7 +9,8 @@ GET /admin/analytics/export    — export CSV
 from __future__ import annotations
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, date as date_type
+from zoneinfo import ZoneInfo  # Python 3.9+
 from typing import Optional
 from collections import Counter
 
@@ -58,8 +59,9 @@ def get_summary(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    today = datetime.utcnow().date()
-    today_start = datetime(today.year, today.month, today.day)
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now_vn = datetime.now(vn_tz)
+    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
 
     total_sessions = db.query(func.count(models.ChatSession.id)).scalar()
     total_messages = db.query(func.count(models.ChatMessage.id)).scalar()
@@ -104,7 +106,12 @@ def get_popular_questions(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    since = datetime.utcnow() - timedelta(days=days)
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now_vn = datetime.now(vn_tz)
+    if days == 1:
+        since = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        since = now_vn - timedelta(days=days)
     user_msgs = db.query(models.ChatMessage.content).filter(
         models.ChatMessage.role == "user",
         models.ChatMessage.created_at >= since,
@@ -128,13 +135,27 @@ def get_hourly_distribution(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    since = datetime.utcnow() - timedelta(days=days)
+    # Dùng now() local thay vì utcnow() để tránh lệch timezone UTC+7
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now_vn = datetime.now(vn_tz)
+    if days == 1:
+        since = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        since = now_vn - timedelta(days=days)
+
+    # AT TIME ZONE để extract giờ theo múi giờ VN (UTC+7), không phải UTC
+    from sqlalchemy import text, cast
+    local_hour = func.extract(
+        "hour",
+        func.timezone("Asia/Ho_Chi_Minh", models.ChatSession.created_at)
+    ).label("hour")
+
     rows = db.query(
-        func.extract("hour", models.ChatSession.created_at).label("hour"),
+        local_hour,
         func.count(models.ChatSession.id).label("count"),
     ).filter(
         models.ChatSession.created_at >= since
-    ).group_by("hour").order_by("hour").all()
+    ).group_by(local_hour).order_by(local_hour).all()
 
     hour_map = {int(r.hour): r.count for r in rows}
     return [HourlyStats(hour=h, count=hour_map.get(h, 0)) for h in range(24)]
@@ -146,9 +167,14 @@ def get_feedback_trend(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    since = datetime.utcnow() - timedelta(days=days)
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now_vn = datetime.now(vn_tz)
+    if days == 1:
+        since = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        since = now_vn - timedelta(days=days)
     rows = db.query(
-        func.date(models.MessageFeedback.created_at).label("date"),
+        func.date(func.timezone("Asia/Ho_Chi_Minh", models.MessageFeedback.created_at)).label("date"),
         models.MessageFeedback.rating,
         func.count(models.MessageFeedback.id).label("count"),
     ).filter(
@@ -190,7 +216,9 @@ def get_no_feedback_messages(
     Lấy các tin nhắn bot CHƯA có feedback (không thumbs_up / thumbs_down).
     Trả về kèm câu hỏi của user ngay trước đó.
     """
-    since = datetime.utcnow() - timedelta(days=days)
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now_vn = datetime.now(vn_tz)
+    since = now_vn - timedelta(days=days)
 
     # Subquery: message_id đã có feedback
     rated_ids = db.query(models.MessageFeedback.message_id).subquery()
@@ -261,7 +289,7 @@ def export_chat_history(
     )
 
     if days:
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")) - timedelta(days=days)
         q = q.filter(models.ChatMessage.created_at >= since)
 
     rows = q.order_by(models.ChatMessage.created_at).all()

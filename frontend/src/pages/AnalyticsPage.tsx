@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
-    RefreshCw, Menu, LogOut, Download, MessagesSquare,
+    RefreshCw, Menu, Download, MessagesSquare,
     Users, MessageSquare, ThumbsUp, ThumbsDown, TrendingUp,
-    CheckCircle, XCircle, Info, TrendingDown, Minus
+    CheckCircle, XCircle, Info, TrendingDown, Minus, Calendar
 } from 'lucide-react';
 
 const API = 'http://127.0.0.1:8000';
 
 interface Toast { id: string; message: string; type: 'success' | 'error' | 'info'; }
 
-// ─── Donut chart (SVG, no deps) ───────────────────────────────────────────────
+// ─── Date range tabs ──────────────────────────────────────────────────────────
+const DATE_RANGES = [
+    { label: 'Hôm nay', days: 1 },
+    { label: '3 ngày',  days: 3 },
+    { label: '7 ngày',  days: 7 },
+    { label: '30 ngày', days: 30 },
+];
+
+// ─── Donut chart ──────────────────────────────────────────────────────────────
 function DonutChart({ up, down }: { up: number; down: number }) {
     const total = up + down || 1;
     const pct = Math.round((up / total) * 100);
@@ -44,8 +51,7 @@ function DonutChart({ up, down }: { up: number; down: number }) {
                     fill="currentColor" className="text-slate-800 dark:text-slate-100">
                     {pct}%
                 </text>
-                <text x={C} y={C + 12} textAnchor="middle" fontSize="12"
-                    fill="#94a3b8">
+                <text x={C} y={C + 12} textAnchor="middle" fontSize="12" fill="#94a3b8">
                     hữu ích
                 </text>
             </svg>
@@ -64,8 +70,7 @@ function DonutChart({ up, down }: { up: number; down: number }) {
 }
 
 // ─── Hourly bar chart ─────────────────────────────────────────────────────────
-function HourlyBars({ data }: { data: { hour: number; count: number }[] }) {
-    // Coerce to number — API may return strings
+function HourlyBars({ data, days }: { data: { hour: number; count: number }[]; days: number }) {
     const filled = Array.from({ length: 24 }, (_, i) => {
         const found = data.find(d => Number(d.hour) === i);
         return { hour: i, count: found ? Number(found.count) : 0 };
@@ -73,28 +78,37 @@ function HourlyBars({ data }: { data: { hour: number; count: number }[] }) {
     const max = Math.max(...filled.map(d => d.count), 1);
     const hasData = filled.some(d => d.count > 0);
     const tickHours = [0, 6, 12, 18, 23];
+    const label = days === 1 ? 'hôm nay' : `${days} ngày qua`;
 
     if (!hasData) {
         return (
-            <div className="flex flex-col items-center justify-center h-[140px] text-slate-400 dark:text-slate-500 gap-2">
-                <MessagesSquare size={24} className="opacity-30" />
-                <p className="text-xs">Chưa có phiên nào trong 7 ngày qua</p>
+            <div className="flex flex-col items-center justify-center min-h-[160px] py-8 text-slate-400 dark:text-slate-500 gap-2">
+                <MessagesSquare size={32} className="opacity-20" />
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chưa có phiên nào trong {label}</p>
+                <p className="text-xs">Dữ liệu sẽ xuất hiện khi có người dùng chat</p>
             </div>
         );
     }
 
+    const BAR_H = 140; // px — chiều cao cố định của vùng bars
+
     return (
         <div>
-            <div className="flex items-end gap-[3px] h-[140px]">
+            <div className="relative flex items-end gap-[3px]" style={{ height: BAR_H }}>
                 {filled.map(({ hour, count }) => {
-                    const h = count === 0 ? 2 : Math.max(Math.round((count / max) * 100), 4);
-                    // Minimum opacity 0.15 for zero bars, 0.5–1.0 for non-zero
-                    const opacity = count === 0 ? 0.1 : 0.5 + 0.5 * (count / max);
+                    const px = count === 0 ? 2 : Math.max(Math.round((count / max) * BAR_H), 4);
+                    const opacity = count === 0 ? 0.1 : 0.45 + 0.55 * (count / max);
                     return (
                         <div key={hour} title={`${hour}:00 — ${count} phiên`}
-                            className="flex-1 flex items-end cursor-default group">
-                            <div className="w-full rounded-t-[3px] transition-opacity group-hover:opacity-60"
-                                style={{ height: `${h}%`, background: '#6366f1', opacity }} />
+                            className="flex-1 flex items-end cursor-default group relative">
+                            {/* Tooltip */}
+                            {count > 0 && (
+                                <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    {hour}h: {count}
+                                </div>
+                            )}
+                            <div className="w-full rounded-t-[3px]"
+                                style={{ height: px, background: '#6366f1', opacity, transition: 'height 0.4s ease, opacity 0.3s ease' }} />
                         </div>
                     );
                 })}
@@ -109,16 +123,16 @@ function HourlyBars({ data }: { data: { hour: number; count: number }[] }) {
 }
 
 // ─── Line chart (Canvas) ──────────────────────────────────────────────────────
-function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thumbs_down: number }[] }) {
+function TrendLineChart({ data, days }: { data: { date: string; thumbs_up: number; thumbs_down: number }[]; days: number }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const label = days === 1 ? 'hôm nay' : `${days} ngày qua`;
 
-    // Wrap draw logic in useCallback so ResizeObserver can reuse it
     const draw = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas || data.length === 0) return;
         const W = canvas.offsetWidth;
-        if (W === 0) return; // not laid out yet — rAF will retry
-        const H = 140;
+        if (W === 0) return;
+        const H = 160;
         const dpr = window.devicePixelRatio || 1;
         canvas.width = W * dpr;
         canvas.height = H * dpr;
@@ -126,22 +140,19 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
         ctx.scale(dpr, dpr);
 
         const pad = { l: 28, r: 8, t: 10, b: 24 };
-        // Coerce to number — API may return strings
         const allVals = data.flatMap(d => [Number(d.thumbs_up), Number(d.thumbs_down)]);
         const vMax = Math.max(...allVals, 1) + 2;
 
-        // Handle single data point (would cause division by zero in xS)
         const xS = (i: number) =>
             data.length === 1
                 ? W / 2
                 : pad.l + (i / (data.length - 1)) * (W - pad.l - pad.r);
         const yS = (v: number) => pad.t + (1 - v / vMax) * (H - pad.t - pad.b);
 
-        const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const dark = document.documentElement.classList.contains('dark');
         const gridColor = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
         const labelColor = dark ? '#64748b' : '#94a3b8';
 
-        // Grid lines
         [0, Math.round(vMax / 2), vMax].forEach(v => {
             ctx.beginPath();
             ctx.strokeStyle = gridColor;
@@ -152,6 +163,14 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
         });
 
         const drawLine = (vals: number[], color: string, fillColor: string) => {
+            if (vals.length < 2) {
+                // Single point — draw dot only
+                ctx.beginPath();
+                ctx.arc(xS(0), yS(vals[0]), 4, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                return;
+            }
             ctx.beginPath();
             vals.forEach((v, i) => i === 0 ? ctx.moveTo(xS(i), yS(v)) : ctx.lineTo(xS(i), yS(v)));
             ctx.lineTo(xS(vals.length - 1), yS(0));
@@ -180,18 +199,16 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
         ctx.font = `9px sans-serif`;
         ctx.textAlign = 'center';
         data.forEach((d, i) => {
-            if (i % 2 !== 0) return;
+            if (data.length > 10 && i % 2 !== 0) return;
             ctx.fillText(d.date.slice(5), xS(i), H - 4);
         });
     }, [data]);
 
-    // rAF ensures canvas offsetWidth is non-zero before drawing
     useEffect(() => {
         const raf = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(raf);
     }, [draw]);
 
-    // Re-draw whenever the container changes size (e.g. sidebar collapse)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -200,32 +217,19 @@ function TrendLineChart({ data }: { data: { date: string; thumbs_up: number; thu
         return () => ro.disconnect();
     }, [draw]);
 
+    if (data.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[160px] text-slate-400 dark:text-slate-500 gap-2">
+                <TrendingUp size={28} className="opacity-20" />
+                <p className="text-sm font-medium">Chưa có dữ liệu phản hồi trong {label}</p>
+                <p className="text-xs">Người dùng cần nhấn 👍/👎 để có dữ liệu ở đây</p>
+            </div>
+        );
+    }
+
     return (
         <div className="relative">
-            {data.length <= 1 ? (
-                <div className="flex flex-col items-center justify-center h-[140px] text-slate-400 dark:text-slate-500 gap-2">
-                    <TrendingUp size={24} className="opacity-30" />
-                    <p className="text-xs text-center">
-                        {data.length === 0
-                            ? 'Chưa có dữ liệu phản hồi trong 14 ngày qua'
-                            : `Chỉ có dữ liệu 1 ngày (${data[0]?.date?.slice(5) ?? ''}) — cần thêm dữ liệu để vẽ đường xu hướng`}
-                    </p>
-                    {data.length === 1 && (
-                        <div className="flex gap-4 text-xs mt-1">
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                                Hữu ích: <strong className="text-slate-600 dark:text-slate-300">{data[0].thumbs_up}</strong>
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-                                Không hữu ích: <strong className="text-slate-600 dark:text-slate-300">{data[0].thumbs_down}</strong>
-                            </span>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <canvas ref={canvasRef} style={{ width: '100%', height: '140px', display: 'block' }} />
-            )}
+            <canvas ref={canvasRef} style={{ width: '100%', height: '160px', display: 'block' }} />
             <div className="flex gap-4 mt-2 justify-end">
                 {[{ label: 'Hữu ích', color: 'bg-green-500' }, { label: 'Không hữu ích', color: 'bg-red-500' }].map(l => (
                     <span key={l.label} className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
@@ -349,6 +353,7 @@ export default function AnalyticsPage() {
     const token = localStorage.getItem('access_token');
     const { setIsMobileMenuOpen } = useOutletContext<any>();
 
+    const [selectedDays, setSelectedDays] = useState(7);
     const [summary, setSummary] = useState<any>(null);
     const [popular, setPopular] = useState<any[]>([]);
     const [hourly, setHourly] = useState<any[]>([]);
@@ -365,22 +370,29 @@ export default function AnalyticsPage() {
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
     }, []);
 
-    const fetchAll = useCallback(async () => {
+    const fetchAll = useCallback(async (days: number) => {
         setIsLoading(true);
         const headers = { Authorization: `Bearer ${token}` };
         try {
             const [s, p, h, ft] = await Promise.all([
                 fetch(`${API}/analytics/summary`, { headers }).then(r => r.json()),
-                fetch(`${API}/analytics/popular?limit=10&days=30`, { headers }).then(r => r.json()),
-                fetch(`${API}/analytics/hourly?days=7`, { headers }).then(r => r.json()),
-                fetch(`${API}/analytics/feedback-trend?days=14`, { headers }).then(r => r.json()),
+                fetch(`${API}/analytics/popular?limit=10&days=${days}`, { headers }).then(r => r.json()),
+                fetch(`${API}/analytics/hourly?days=${days}`, { headers }).then(r => r.json()),
+                fetch(`${API}/analytics/feedback-trend?days=${days}`, { headers }).then(r => r.json()),
             ]);
-            setSummary(s); setPopular(p); setHourly(h); setFeedbackTrend(ft);
+            setSummary(s);
+            setPopular(Array.isArray(p) ? p : []);
+            setHourly(Array.isArray(h) ? h : []);
+            setFeedbackTrend(Array.isArray(ft) ? ft : []);
         } catch { addToast('Lỗi tải dữ liệu', 'error'); }
         finally { setIsLoading(false); }
     }, [token, addToast]);
 
-    useEffect(() => { fetchAll(); }, [fetchAll]);
+    useEffect(() => { fetchAll(selectedDays); }, [selectedDays]);
+
+    const handleDaysChange = (days: number) => {
+        setSelectedDays(days);
+    };
 
     const handleExport = async () => {
         setIsExporting(true);
@@ -407,6 +419,8 @@ export default function AnalyticsPage() {
         { label: '👍 Hữu ích', value: summary.thumbs_up, icon: <ThumbsUp size={18} />, iconBg: 'bg-emerald-100 dark:bg-emerald-900/40', iconColor: 'text-emerald-600 dark:text-emerald-400' },
         { label: '👎 Không hữu ích', value: summary.thumbs_down, icon: <ThumbsDown size={18} />, iconBg: 'bg-red-100 dark:bg-red-900/40', iconColor: 'text-red-600 dark:text-red-400' },
     ] : [];
+
+    const rangeLabelShort = DATE_RANGES.find(r => r.days === selectedDays)?.label ?? `${selectedDays} ngày`;
 
     return (
         <>
@@ -439,20 +453,26 @@ export default function AnalyticsPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Date range tabs */}
+                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl p-1 gap-0.5">
+                            {DATE_RANGES.map(({ label, days }) => (
+                                <button key={days} onClick={() => handleDaysChange(days)}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${selectedDays === days
+                                        ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
                         <button onClick={handleExport} disabled={isExporting}
                             className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-70 transition-all active:scale-95 shadow-sm shadow-green-500/20">
                             {isExporting ? <RefreshCw size={13} className="animate-spin" /> : <Download size={13} />}
-                            Export CSV
+                            <span className="hidden sm:inline">Export CSV</span>
                         </button>
-                        <button onClick={fetchAll}
+                        <button onClick={() => fetchAll(selectedDays)}
                             className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                             title="Làm mới">
                             <RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} />
-                        </button>
-                        <button onClick={() => { localStorage.removeItem('access_token'); navigate('/login'); }}
-                            className="text-sm flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 font-medium transition-colors px-2 py-2">
-                            <LogOut size={15} />
-                            <span className="hidden sm:inline">Đăng xuất</span>
                         </button>
                     </div>
                 </header>
@@ -460,11 +480,13 @@ export default function AnalyticsPage() {
                 <div className="flex-1 overflow-y-auto p-4 lg:p-8">
                     <div className="max-w-6xl mx-auto space-y-5">
                         {isLoading ? (
-                            <div className="flex items-center justify-center py-32 text-slate-400 dark:text-slate-500">
+                            <div className="flex flex-col items-center justify-center py-32 gap-3 text-slate-400 dark:text-slate-500">
                                 <RefreshCw size={32} className="animate-spin opacity-40" />
+                                <p className="text-sm">Đang tải dữ liệu...</p>
                             </div>
                         ) : (
                             <>
+                                {/* Stat cards */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                     {statCards.map(({ label, value, icon, iconBg, iconColor }, i) => (
                                         <motion.div key={label}
@@ -480,18 +502,27 @@ export default function AnalyticsPage() {
                                     ))}
                                 </div>
 
+                                {/* Hourly + Donut */}
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                                     <div className="lg:col-span-2 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
                                         <div className="flex items-center justify-between mb-5">
-                                            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Phân bố theo giờ</h3>
-                                            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">7 ngày gần nhất</span>
+                                            <div>
+                                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Phân bố theo giờ</h3>
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Số phiên chat theo từng khung giờ</p>
+                                            </div>
+                                            <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">
+                                                <Calendar size={11} /> {rangeLabelShort}
+                                            </span>
                                         </div>
-                                        <HourlyBars data={hourly} />
+                                        <HourlyBars data={hourly} days={selectedDays} />
                                     </div>
 
                                     <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6 flex flex-col">
                                         <div className="flex items-center justify-between mb-5">
-                                            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Tỷ lệ phản hồi</h3>
+                                            <div>
+                                                <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Tỷ lệ phản hồi</h3>
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Tổng hợp toàn thời gian</p>
+                                            </div>
                                         </div>
                                         {summary?.thumbs_up + summary?.thumbs_down > 0 ? (
                                             <div className="flex-1 flex flex-col items-center justify-center gap-2">
@@ -503,31 +534,43 @@ export default function AnalyticsPage() {
                                         ) : (
                                             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400 dark:text-slate-500">
                                                 <ThumbsUp size={28} className="opacity-20" />
-                                                <p className="text-xs">Chưa có feedback</p>
+                                                <p className="text-sm font-medium">Chưa có feedback</p>
+                                                <p className="text-xs text-center">Người dùng cần nhấn 👍/👎 để có dữ liệu</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                {feedbackTrend.length > 0 && (
-                                    <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
-                                        <div className="flex items-center justify-between mb-5">
-                                            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Xu hướng phản hồi</h3>
-                                            <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">14 ngày</span>
-                                        </div>
-                                        <TrendLineChart data={feedbackTrend} />
-                                    </div>
-                                )}
-
+                                {/* Feedback trend — luôn render, show empty state khi không có data */}
                                 <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
                                     <div className="flex items-center justify-between mb-5">
-                                        <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Câu hỏi phổ biến nhất</h3>
-                                        <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full">
-                                            30 ngày qua
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Xu hướng phản hồi</h3>
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">👍 Hữu ích và 👎 Không hữu ích theo ngày</p>
+                                        </div>
+                                        <span className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2.5 py-1 rounded-full">
+                                            <Calendar size={11} /> {rangeLabelShort}
+                                        </span>
+                                    </div>
+                                    <TrendLineChart data={feedbackTrend} days={selectedDays} />
+                                </div>
+
+                                {/* Popular questions */}
+                                <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/60 p-6">
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-700 dark:text-slate-200">Câu hỏi phổ biến nhất</h3>
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Các câu hỏi được đặt nhiều nhất</p>
+                                        </div>
+                                        <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-full">
+                                            <Calendar size={11} /> {rangeLabelShort}
                                         </span>
                                     </div>
                                     {popular.length === 0 ? (
-                                        <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">Chưa có dữ liệu</p>
+                                        <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-400 dark:text-slate-500">
+                                            <MessageSquare size={28} className="opacity-20" />
+                                            <p className="text-sm font-medium">Chưa có dữ liệu trong {rangeLabelShort}</p>
+                                        </div>
                                     ) : (
                                         <PopularTable data={popular} />
                                     )}

@@ -16,6 +16,7 @@ import UserProfilePage from '@/pages/UserProfilePage';
 import ChatPage from '@/pages/ChatPage';
 // Import trang Settings mới
 import SettingPage from '@/pages/SettingPage';
+import DocumentChunksPage from '@/pages/DocumentChunksPage';
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
 import ResetPasswordPage from './auth/ResetPasswordPage';
 
@@ -36,6 +37,7 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="accounts" element={<AccountManagementPage />} />
             <Route path="records" element={<AdminRecordsPage />} />
+            <Route path="records/:documentId/chunks" element={<DocumentChunksPage />} />
             <Route path="faq" element={<FAQPage />} />
             <Route path="feedback" element={<FeedbackPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
