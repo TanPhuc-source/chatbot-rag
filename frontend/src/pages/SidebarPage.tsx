@@ -6,6 +6,7 @@ import {
     FolderOpen, ShieldCheck, User as UserIcon, ChevronUp,
     ThumbsUp, BarChart3, HelpCircle, SlidersHorizontal
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore'; // Điều chỉnh lại đường dẫn cho đúng với dự án của bạn
 
 import logoImage from '../components/images/images.jpg';
 
@@ -29,6 +30,7 @@ interface UserProfile {
 }
 
 export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarProps) {
+    const authLogout = useAuthStore((s) => s.logout);
     const { pathname } = useLocation();
     const navigate = useNavigate();
 
@@ -54,9 +56,15 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
     }, []);
 
     const handleLogout = () => {
-        // Thực hiện đăng xuất khi người dùng bấm Xác nhận trong Modal
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_role');
+        // Thực hiện xóa state trong store (store nên tự handle việc xóa localStorage)
+        if (authLogout) {
+            authLogout();
+        } else {
+            // Fallback an toàn nếu store chưa có hàm logout
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_role');
+        }
+
         setShowLogoutConfirm(false);
         navigate('/login');
     };

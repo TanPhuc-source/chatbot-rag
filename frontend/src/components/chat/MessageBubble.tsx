@@ -14,9 +14,26 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={copy} title={copied ? "Đã sao chép" : "Sao chép"}
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, color: copied ? "#10b981" : "var(--text-muted)", background: "var(--bg-3)", border: "1px solid var(--border)", cursor: "pointer", transition: "all 0.14s", flexShrink: 0 }}>
-      {copied ? <Check size={11} /> : <Copy size={11} />}
+    <button
+      onClick={copy}
+      title={copied ? "Đã sao chép" : "Sao chép"}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 30,
+        height: 30,
+        borderRadius: 8,
+        color: copied ? "#10b981" : "var(--text-muted)",
+        background: "var(--bg-3)",
+        border: "1px solid var(--border)",
+        cursor: "pointer",
+        transition: "all 0.15s ease",
+        flexShrink: 0,
+      }}
+      className="hover:bg-[var(--bg-2)] hover:border-[var(--brand)]"
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
     </button>
   );
 }
@@ -36,22 +53,58 @@ function FeedbackButtons({ messageId }: { messageId: number }) {
       });
       setRating(r);
     } catch { }
-    finally { setIsLoading(false); }
+    finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div style={{ display: "flex", gap: 4 }}>
-      <button onClick={() => submit("up")} title="Hữu ích"
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "1px solid var(--border)", cursor: rating ? "default" : "pointer", transition: "all 0.14s", flexShrink: 0,
+    <div style={{ display: "flex", gap: 6 }}>
+      <button
+        onClick={() => submit("up")}
+        title="Hữu ích"
+        disabled={isLoading}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          border: "1px solid var(--border)",
+          cursor: rating ? "default" : "pointer",
+          transition: "all 0.15s ease",
+          flexShrink: 0,
           background: rating === "up" ? "#dcfce7" : "var(--bg-3)",
-          color: rating === "up" ? "#16a34a" : "var(--text-muted)" }}>
-        <ThumbsUp size={11} />
+          color: rating === "up" ? "#16a34a" : "var(--text-muted)",
+          opacity: isLoading ? 0.6 : 1,
+        }}
+        className={!rating ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
+      >
+        <ThumbsUp size={12} />
       </button>
-      <button onClick={() => submit("down")} title="Không hữu ích"
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "1px solid var(--border)", cursor: rating ? "default" : "pointer", transition: "all 0.14s", flexShrink: 0,
+      <button
+        onClick={() => submit("down")}
+        title="Không hữu ích"
+        disabled={isLoading}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 30,
+          height: 30,
+          borderRadius: 8,
+          border: "1px solid var(--border)",
+          cursor: rating ? "default" : "pointer",
+          transition: "all 0.15s ease",
+          flexShrink: 0,
           background: rating === "down" ? "#fee2e2" : "var(--bg-3)",
-          color: rating === "down" ? "#dc2626" : "var(--text-muted)" }}>
-        <ThumbsDown size={11} />
+          color: rating === "down" ? "#dc2626" : "var(--text-muted)",
+          opacity: isLoading ? 0.6 : 1,
+        }}
+        className={!rating ? "hover:bg-[var(--bg-2)] hover:border-[var(--brand)]" : ""}
+      >
+        <ThumbsDown size={12} />
       </button>
     </div>
   );
@@ -59,21 +112,59 @@ function FeedbackButtons({ messageId }: { messageId: number }) {
 
 function TypingIndicator() {
   return (
-    <div className="flex gap-3 animate-fade-in" style={{ alignItems: "flex-start" }}>
-      <div style={{ width: "clamp(28px, 5vw, 36px)", height: "clamp(28px, 5vw, 36px)", borderRadius: 10, background: "linear-gradient(135deg,#1a5fb4,#2a80d8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 3px 12px rgba(26,95,180,0.30)" }}>
-        <Sparkles size={14} color="white" />
+    <div
+      className="flex gap-3 animate-fade-in"
+      style={{ alignItems: "flex-start" }}
+    >
+      <div
+        style={{
+          width: "clamp(32px, 5vw, 40px)",
+          height: "clamp(32px, 5vw, 40px)",
+          borderRadius: 12,
+          background: "linear-gradient(145deg, var(--brand), #2a80d8)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          boxShadow: "0 6px 16px var(--brand-glow)",
+        }}
+      >
+        <Sparkles size={16} color="white" />
       </div>
-      <div className="bubble-ai" style={{ padding: "clamp(10px, 2vw, 14px) clamp(13px, 2.5vw, 18px)", display: "flex", alignItems: "center", gap: 6 }}>
-        {[0, 1, 2].map(i => (
-          <span key={i} className="animate-pulse-dot"
-            style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "var(--brand)", animationDelay: `${i * 0.2}s` }} />
+      <div
+        className="bubble-ai"
+        style={{
+          padding: "clamp(12px, 2.5vh, 16px) clamp(16px, 3vw, 22px)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "var(--bg-2)",
+          borderRadius: 20,
+          border: "1px solid var(--border)",
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="animate-pulse-dot"
+            style={{
+              display: "inline-block",
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "var(--brand)",
+              animation: `pulse 1.2s ease infinite ${i * 0.2}s`,
+            }}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-interface Props { message: Message; }
+interface Props {
+  message: Message;
+}
 
 export default function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
@@ -82,42 +173,112 @@ export default function MessageBubble({ message }: Props) {
     return <TypingIndicator />;
   }
 
-  if (isUser) return (
-    <div className="animate-slide-up" style={{ display: "flex", justifyContent: "flex-end" }}>
-      <div style={{ maxWidth: "82%" }}>
-        <div className="bubble-user" style={{ padding: "clamp(9px, 2vw, 13px) clamp(13px, 2.5vw, 18px)" }}>
-          <p style={{ fontSize: "clamp(13px, 2.5vw, 15px)", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>{message.content}</p>
+  if (isUser)
+    return (
+      <div
+        className="animate-slide-up"
+        style={{ display: "flex", justifyContent: "flex-end" }}
+      >
+        <div style={{ maxWidth: "80%" }}>
+          <div
+            className="bubble-user"
+            style={{
+              padding: "clamp(10px, 2.2vh, 14px) clamp(14px, 3vw, 20px)",
+              background: "var(--brand)",
+              color: "white",
+              borderRadius: 22,
+              borderBottomRightRadius: 4,
+              boxShadow: "0 6px 16px var(--brand-glow)",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "clamp(14px, 2.5vw, 16px)",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+                margin: 0,
+              }}
+            >
+              {message.content}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 
   return (
-    <div className="animate-slide-up" style={{ display: "flex", gap: "clamp(8px, 2vw, 14px)", alignItems: "flex-start" }}>
-      <div style={{ width: "clamp(28px, 5vw, 36px)", height: "clamp(28px, 5vw, 36px)", borderRadius: 10, background: "linear-gradient(135deg,#1a5fb4,#2a80d8)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 3px 12px rgba(26,95,180,0.28)", marginTop: 2 }}>
-        <Sparkles size={14} color="white" />
+    <div
+      className="animate-slide-up"
+      style={{
+        display: "flex",
+        gap: "clamp(10px, 2.5vw, 16px)",
+        alignItems: "flex-start",
+      }}
+    >
+      <div
+        style={{
+          width: "clamp(32px, 5vw, 40px)",
+          height: "clamp(32px, 5vw, 40px)",
+          borderRadius: 12,
+          background: "linear-gradient(145deg, var(--brand), #2a80d8)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          boxShadow: "0 6px 16px var(--brand-glow)",
+          marginTop: 4,
+        }}
+      >
+        <Sparkles size={16} color="white" />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="bubble-ai" style={{ padding: "clamp(10px, 2vw, 14px) clamp(13px, 2.5vw, 18px)" }}>
-          <div className="prose-chat">
+        <div
+          className="bubble-ai"
+          style={{
+            padding: "clamp(12px, 2.5vh, 16px) clamp(16px, 3vw, 22px)",
+            background: "var(--bg-2)",
+            borderRadius: 22,
+            borderBottomLeftRadius: 4,
+            border: "1px solid var(--border)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+          }}
+        >
+          <div className="prose-chat" style={{ color: "var(--text-primary)" }}>
             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
               {message.content}
             </ReactMarkdown>
             {message.isStreaming && (
-              <span style={{ display: "inline-block", width: 2, height: 14, background: "var(--brand)", marginLeft: 2, animation: "pulse 1s ease infinite", verticalAlign: "middle" }} />
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 2,
+                  height: 16,
+                  background: "var(--brand)",
+                  marginLeft: 4,
+                  animation: "pulse 1s ease infinite",
+                  verticalAlign: "middle",
+                }}
+              />
             )}
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6, paddingLeft: 4 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {!message.isStreaming && message.sources?.map((src, i) => (
-              <SourceCard key={i} source={src} />
-            ))}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 8,
+            paddingLeft: 4,
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {!message.isStreaming &&
+              message.sources?.map((src, i) => <SourceCard key={i} source={src} />)}
           </div>
           {!message.isStreaming && (
-            <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: 6 }}>
               {message.dbId && <FeedbackButtons messageId={message.dbId} />}
               <CopyButton text={message.content} />
             </div>
