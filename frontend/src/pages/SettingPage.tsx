@@ -1,10 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useOutletContext } from 'react-router-dom';
-import { Menu, Palette, CheckCircle, PaintRoller, Moon, Sun, Plus } from 'lucide-react';
+import {
+    Menu, Palette, CheckCircle, PaintRoller, Moon, Sun, Plus,
+    Save, MessageSquare, Type, Building2, Bot
+} from 'lucide-react';
 import { useTheme, PRESET_THEMES } from '@/contexts/ThemeContext';
+import { useSettingsStore } from '@/store/settingsStore';
 
 export default function SettingsPage() {
+    // 1. STATE CHO LAYOUT ADMIN
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
         setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
@@ -12,13 +17,41 @@ export default function SettingsPage() {
 
     const { themeColor, setThemeColor, isDarkMode, toggleDarkMode } = useTheme();
     const colorInputRef = useRef<HTMLInputElement>(null);
-
-    // Kiểm tra xem màu hiện tại có phải là màu tự chọn không
     const isCustomColor = !PRESET_THEMES.find(t => t.id === themeColor);
 
+    // 2. STATE CHO CHATBOT SETTINGS
+    const { settings, fetchSettings, updateSettings, isLoading } = useSettingsStore();
+    const [formData, setFormData] = useState(settings);
+
+    useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
+
+    useEffect(() => {
+        if (settings) {
+            setFormData(settings);
+        }
+    }, [settings]);
+
+    const handleChatbotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSaveChatbotSettings = async () => {
+        const token = localStorage.getItem("access_token");
+        if (!token) return alert("Bạn chưa đăng nhập!");
+
+        try {
+            await updateSettings(formData, token);
+            alert("Cập nhật giao diện Chatbot thành công!");
+        } catch (error) {
+            alert("Cập nhật thất bại. Vui lòng thử lại.");
+        }
+    };
+
     return (
-        <>
-            {/* Header: Có hỗ trợ dark mode (dark:bg-slate-900) */}
+        <div className="flex flex-col h-full">
+            {/* --- HEADER --- */}
             <header className="h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 sticky top-0 transition-colors">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
@@ -27,27 +60,30 @@ export default function SettingsPage() {
                     <span className="font-bold text-lg text-slate-800 dark:text-white tracking-tight hidden sm:block">Cài đặt hệ thống</span>
                 </div>
 
-                {/* Nút Toggle Sáng/Tối */}
                 <button
                     onClick={toggleDarkMode}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-sm"
                 >
                     {isDarkMode ? <Moon size={16} className="text-blue-400" /> : <Sun size={16} className="text-amber-500" />}
                     <span className="text-sm font-semibold">{isDarkMode ? 'Chế độ Tối' : 'Chế độ Sáng'}</span>
                 </button>
             </header>
 
-            <div className="flex-1 px-4 lg:px-8 pt-6 pb-4 overflow-y-auto bg-slate-50/50 dark:bg-[#0d0d0d] transition-colors">
-                <div className="max-w-4xl mx-auto space-y-6">
+            {/* --- MAIN CONTENT --- */}
+            <div className="flex-1 px-4 lg:px-8 pt-6 pb-12 overflow-y-auto bg-slate-50/50 dark:bg-[#0d0d0d] transition-colors">
+                <div className="max-w-4xl mx-auto space-y-8">
 
-                    <div className="bg-white dark:bg-[#161616] rounded-2xl border border-slate-200 dark:border-[#2a2a2a] shadow-sm overflow-hidden transition-colors">
+                    {/* ========================================================= */}
+                    {/* SECTION 1: CÀI ĐẶT GIAO DIỆN ADMIN */}
+                    {/* ========================================================= */}
+                    <section className="bg-white dark:bg-[#161616] rounded-2xl border border-slate-200 dark:border-[#2a2a2a] shadow-sm overflow-hidden transition-colors">
                         <div className="px-6 py-5 border-b border-slate-100 dark:border-[#2a2a2a] flex items-center gap-3 bg-slate-50/50 dark:bg-transparent">
                             <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                                 <Palette className="text-blue-600 dark:text-blue-400" size={20} />
                             </div>
                             <div>
-                                <h3 className="font-bold text-slate-800 dark:text-white text-lg">Giao diện & Màu sắc</h3>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">Tùy chỉnh màu sắc chủ đạo cho toàn bộ trang quản trị.</p>
+                                <h3 className="font-bold text-slate-800 dark:text-white text-lg">Giao diện Trang quản trị</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Tùy chỉnh màu sắc chủ đạo cho toàn bộ khu vực Admin.</p>
                             </div>
                         </div>
 
@@ -57,7 +93,6 @@ export default function SettingsPage() {
                             </h4>
 
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                                {/* Map các màu có sẵn */}
                                 {PRESET_THEMES.map((opt) => (
                                     <button
                                         key={opt.id}
@@ -77,7 +112,6 @@ export default function SettingsPage() {
                                     </button>
                                 ))}
 
-                                {/* Nút MÀU TÙY CHỈNH (Custom Color Picker) */}
                                 <button
                                     onClick={() => colorInputRef.current?.click()}
                                     className={`relative p-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all
@@ -106,26 +140,154 @@ export default function SettingsPage() {
                                     />
                                 </button>
                             </div>
+                        </div>
+                    </section>
 
-                            {/* Demo hiển thị */}
-                            <div className="mt-8 p-6 border border-slate-200 dark:border-[#2a2a2a] rounded-xl bg-slate-50 dark:bg-[#0d0d0d] transition-colors">
-                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-4 tracking-wider">Xem trước giao diện</p>
-                                <div className="flex flex-wrap gap-4">
-                                    <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/30 transition-all">
-                                        Nút Primary
-                                    </button>
-                                    <button className="px-5 py-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg text-sm font-bold hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all">
-                                        Nút Secondary
-                                    </button>
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium">
-                                        <CheckCircle size={18} /> Thông báo hệ thống
-                                    </div>
+
+                    {/* ========================================================= */}
+                    {/* SECTION 2: CÀI ĐẶT GIAO DIỆN CHATBOT (Người dùng) */}
+                    {/* ========================================================= */}
+                    <section className="bg-white dark:bg-[#161616] rounded-2xl border border-slate-200 dark:border-[#2a2a2a] shadow-sm overflow-hidden transition-colors">
+                        <div className="px-6 py-5 border-b border-slate-100 dark:border-[#2a2a2a] flex items-center justify-between bg-slate-50/50 dark:bg-transparent">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                                    <MessageSquare className="text-green-600 dark:text-green-400" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800 dark:text-white text-lg">Giao diện Chatbot</h3>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">Thiết lập hiển thị cho người dùng ngoài màn hình trò chuyện.</p>
                                 </div>
                             </div>
                         </div>
-                    </div>
+
+                        <div className="p-6 space-y-8">
+
+                            {/* Màu chủ đạo Chatbot */}
+                            <div>
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                    <Bot size={16} className="text-green-500" /> Màu thương hiệu Chatbot (Brand Color)
+                                </h4>
+                                <div className="flex items-center gap-6 bg-slate-50 dark:bg-[#0d0d0d] p-4 rounded-xl border border-slate-200 dark:border-[#2a2a2a]">
+                                    <input
+                                        type="color"
+                                        name="themeColor"
+                                        value={formData.themeColor || "#1a5fb4"}
+                                        onChange={handleChatbotChange}
+                                        className="w-14 h-14 rounded-lg cursor-pointer border-0 p-0 shadow-sm transition-transform hover:scale-105 bg-transparent"
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Mã màu (Hex)</span>
+                                        <input
+                                            type="text"
+                                            name="themeColor"
+                                            value={formData.themeColor || "#1a5fb4"}
+                                            onChange={handleChatbotChange}
+                                            className="font-mono text-sm bg-white dark:bg-[#161616] border border-slate-300 dark:border-[#2a2a2a] rounded-md px-3 py-1.5 text-slate-800 dark:text-white focus:outline-none focus:border-green-500 uppercase"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Lời chào */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <Type size={16} className="text-blue-500" /> Tiêu đề chính
+                                    </h4>
+                                    <input
+                                        type="text"
+                                        name="welcomeTitle"
+                                        value={formData.welcomeTitle || ""}
+                                        onChange={handleChatbotChange}
+                                        placeholder="Ví dụ: Xin chào! 👋"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors dark:bg-[#0d0d0d] dark:border-[#2a2a2a] dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <Type size={16} className="text-blue-500 opacity-50" /> Tiêu đề phụ
+                                    </h4>
+                                    <input
+                                        type="text"
+                                        name="welcomeSubtitle"
+                                        value={formData.welcomeSubtitle || ""}
+                                        onChange={handleChatbotChange}
+                                        placeholder="Ví dụ: Tôi có thể giúp gì cho bạn?"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors dark:bg-[#0d0d0d] dark:border-[#2a2a2a] dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Thông tin tổ chức */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <Building2 size={16} className="text-purple-500" /> Tên Cơ quan / Trường học
+                                    </h4>
+                                    <input
+                                        type="text"
+                                        name="schoolName"
+                                        value={formData.schoolName || ""}
+                                        onChange={handleChatbotChange}
+                                        placeholder="Ví dụ: Trường Đại Học Đồng Tháp"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors dark:bg-[#0d0d0d] dark:border-[#2a2a2a] dark:text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <Building2 size={16} className="text-purple-500 opacity-50" /> Tên Khoa / Trung tâm
+                                    </h4>
+                                    <input
+                                        type="text"
+                                        name="schoolDept"
+                                        value={formData.schoolDept || ""}
+                                        onChange={handleChatbotChange}
+                                        placeholder="Ví dụ: Trung Tâm Ngoại Ngữ Và Tin Học"
+                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors dark:bg-[#0d0d0d] dark:border-[#2a2a2a] dark:text-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-8 pt-8 border-t border-slate-200 dark:border-[#2a2a2a]">
+                                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-6 flex items-center gap-2">
+                                    <MessageSquare size={16} className="text-orange-500" /> Các câu hỏi gợi ý (FAQ)
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {[1, 2, 3, 4].map((num) => (
+                                        <div key={num}>
+                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                Câu hỏi gợi ý {num}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name={`faq${num}`}
+                                                value={formData[`faq${num}` as keyof typeof formData] || ""}
+                                                onChange={handleChatbotChange}
+                                                placeholder={`Nhập nội dung câu hỏi ${num}...`}
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors dark:bg-[#0d0d0d] dark:border-[#2a2a2a] dark:text-white"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* Footer Card - Nút Lưu */}
+                        <div className="px-6 py-4 bg-slate-50/80 dark:bg-[#0d0d0d]/80 border-t border-slate-200 dark:border-[#2a2a2a] flex justify-end">
+                            <button
+                                onClick={handleSaveChatbotSettings}
+                                disabled={isLoading}
+                                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-green-500/20 disabled:opacity-70 disabled:cursor-not-allowed active:scale-95"
+                            >
+                                <Save size={18} />
+                                {isLoading ? "Đang lưu..." : "Lưu cài đặt Chatbot"}
+                            </button>
+                        </div>
+                    </section>
+
                 </div>
             </div>
-        </>
+        </div>
     );
 }

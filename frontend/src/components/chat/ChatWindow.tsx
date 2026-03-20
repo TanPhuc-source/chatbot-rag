@@ -3,15 +3,26 @@ import { Sparkles, Zap } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import InputBar from "./InputBar";
 import { useChat } from "@/hooks/useChat";
+import { useSettingsStore } from "@/store/settingsStore";
 
-const SUGGESTIONS = [
-  { icon: "🎓", text: "Thủ tục đăng ký thi VSTEP như thế nào?" },
-  { icon: "💰", text: "Học phí các khóa ngoại ngữ là bao nhiêu?" },
-  { icon: "📜", text: "Trung tâm có những chứng chỉ tiếng Anh nào?" },
-  { icon: "📅", text: "Lịch khai giảng các khóa học sắp tới?" },
-];
+// const SUGGESTIONS = [
+//   { icon: "🎓", text: "Thủ tục đăng ký thi VSTEP như thế nào?" },
+//   { icon: "💰", text: "Học phí các khóa ngoại ngữ là bao nhiêu?" },
+//   { icon: "📜", text: "Trung tâm có những chứng chỉ tiếng Anh nào?" },
+//   { icon: "📅", text: "Lịch khai giảng các khóa học sắp tới?" },
+// ];
 
 function WelcomeScreen({ onSuggest }: { onSuggest: (q: string) => void }) {
+  const { settings } = useSettingsStore();
+
+  // Lấy các câu hỏi động từ SettingsStore, tự động bỏ qua nếu ô bị bỏ trống
+  const dynamicSuggestions = [
+    { icon: "🎓", text: settings.faq1 },
+    { icon: "💰", text: settings.faq2 },
+    { icon: "📜", text: settings.faq3 },
+    { icon: "📅", text: settings.faq4 },
+  ].filter(s => s.text && s.text.trim() !== "");
+
   return (
     <div
       style={{
@@ -47,129 +58,124 @@ function WelcomeScreen({ onSuggest }: { onSuggest: (q: string) => void }) {
           >
             <Sparkles size={36} color="white" />
           </div>
-          <span
-            style={{
-              position: "absolute",
-              bottom: 6,
-              right: 6,
-              width: 16,
-              height: 16,
-              borderRadius: "50%",
-              background: "#10b981",
-              border: "3px solid var(--bg-base)",
-              display: "block",
-              boxShadow: "0 0 0 2px rgba(16,185,129,0.3)",
-            }}
-          />
         </div>
+
         <h2
           style={{
-            fontSize: "clamp(24px, 5vw, 34px)",
-            fontWeight: 700,
+            fontSize: "clamp(24px, 4vw, 32px)",
+            fontWeight: 800,
             color: "var(--text-primary)",
-            margin: "0 0 8px",
-            letterSpacing: "-0.02em",
+            margin: "0 0 12px",
+            letterSpacing: "-0.02em"
           }}
         >
-          Xin chào! 👋
+          {settings.welcomeTitle}
         </h2>
+
         <p
           style={{
-            fontSize: "clamp(15px, 2.8vw, 18px)",
-            color: "var(--brand)",
-            margin: "0 0 8px",
-            fontWeight: 500,
-          }}
-        >
-          Tôi có thể giúp gì cho bạn?
-        </p>
-        <p
-          style={{
-            fontSize: "clamp(12px, 2.2vw, 14px)",
-            color: "var(--text-muted)",
-            margin: 0,
+            fontSize: "clamp(15px, 2.5vw, 18px)",
+            color: "var(--text-secondary)",
             lineHeight: 1.6,
+            margin: "0 0 24px"
           }}
         >
-          Trợ lý AI · Trung tâm Ngoại ngữ & Tin học · ĐH Đồng Tháp
+          {settings.welcomeSubtitle}
+        </p>
+
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--text-muted)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            margin: 0
+          }}
+        >
+          Trợ lý AI · {settings.schoolDept} · {settings.schoolName}
         </p>
       </div>
 
-      <div style={{ width: "100%", maxWidth: 720 }}>
-        <p
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--text-muted)",
-            textAlign: "center",
-            marginBottom: "clamp(12px, 2.5vh, 18px)",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-          }}
-        >
-          Câu hỏi thường gặp
-        </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: "clamp(10px, 2vw, 14px)",
-          }}
-        >
-          {SUGGESTIONS.map(({ icon, text }) => (
-            <button
-              key={text}
-              onClick={() => onSuggest(text)}
-              className="suggest-card"
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "clamp(10px, 2vw, 14px)",
-                padding: "clamp(12px, 2.5vh, 16px) clamp(14px, 3vw, 18px)",
-                borderRadius: 18,
-                textAlign: "left",
-                background: "var(--bg-1)",
-                border: "1px solid var(--border)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                backdropFilter: "blur(4px)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--brand)";
-                e.currentTarget.style.boxShadow = "0 8px 20px var(--brand-glow)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border)";
-                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <span
+      {dynamicSuggestions.length > 0 && (
+        <div style={{ width: "100%", maxWidth: 720 }}>
+          <p
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--text-muted)",
+              textAlign: "center",
+              marginBottom: "clamp(12px, 2.5vh, 18px)",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
+          >
+            Câu hỏi thường gặp
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "clamp(10px, 2vw, 14px)",
+            }}
+          >
+            {dynamicSuggestions.map(({ icon, text }) => (
+              <button
+                key={text}
+                onClick={() => onSuggest(text)}
+                className="suggest-card"
                 style={{
-                  fontSize: "clamp(18px, 3.5vw, 24px)",
-                  lineHeight: 1,
-                  flexShrink: 0,
-                  marginTop: 2,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "clamp(10px, 2vw, 14px)",
+                  padding: "clamp(12px, 2.5vh, 16px) clamp(14px, 3vw, 18px)",
+                  borderRadius: 18,
+                  textAlign: "left",
+                  background: "var(--bg-1)",
+                  border: "1px solid var(--border)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  backdropFilter: "blur(4px)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--brand)";
+                  e.currentTarget.style.boxShadow = "0 8px 20px var(--brand-glow)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.02)";
+                  e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {icon}
-              </span>
-              <span
-                style={{
-                  fontSize: "clamp(12px, 2.2vw, 15px)",
-                  color: "var(--text-secondary)",
-                  fontWeight: 500,
-                  lineHeight: 1.5,
-                }}
-              >
-                {text}
-              </span>
-            </button>
-          ))}
+                <span
+                  style={{
+                    fontSize: "clamp(18px, 3.5vw, 24px)",
+                    lineHeight: 1,
+                    flexShrink: 0,
+                    marginTop: 2,
+                  }}
+                >
+                  {icon}
+                </span>
+                <span
+                  style={{
+                    fontSize: "clamp(12px, 2.2vw, 15px)",
+                    color: "var(--text-secondary)",
+                    fontWeight: 500,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {text}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

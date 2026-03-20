@@ -96,14 +96,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
       if (!res.ok) return;
 
-      // Cập nhật lại UI sau khi xóa thành công
-      const { conversations, activeId } = get();
+      const { conversations, activeId, selectConversation } = get();
+
+      // Lọc bỏ cuộc trò chuyện vừa xóa
       const updated = conversations.filter((c) => c.id !== id);
       set({ conversations: updated });
 
-      // Nếu cuộc trò chuyện đang mở bị xóa, clear màn hình
+      // Nếu xóa trúng cuộc trò chuyện đang mở trên màn hình
       if (activeId === id) {
-        set({ activeId: null, messages: [] });
+        if (updated.length > 0) {
+          // Tự động load tin nhắn của cuộc trò chuyện trên cùng
+          selectConversation(updated[0].id, token);
+        } else {
+          // Nếu đã xóa hết không còn đoạn chat nào thì mới làm trắng màn hình
+          set({ activeId: null, messages: [] });
+        }
       }
     } catch {
       console.error("Lỗi khi xóa cuộc trò chuyện");

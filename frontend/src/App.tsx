@@ -22,6 +22,7 @@ import DocumentChunksPage from '@/pages/DocumentChunksPage';
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
 import ResetPasswordPage from './auth/ResetPasswordPage';
 
+
 // Redirect admin → /admin/analytics, user → ChatPage
 function RootRedirect() {
   const { init, isLoggedIn, role } = useAuthStore();
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="bot-settings" element={<BotSettingsPage />} />
             {/* Khai báo Route cho trang Cài đặt chung */}
             <Route path="settings" element={<SettingPage />} />
+
           </Route>
         </Routes>
       </BrowserRouter>

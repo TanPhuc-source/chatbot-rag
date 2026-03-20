@@ -4,7 +4,7 @@ import axios from 'axios';
 import {
     LayoutDashboard, BrainCircuit, Settings, LogOut, X,
     FolderOpen, ShieldCheck, User as UserIcon, ChevronUp,
-    ThumbsUp, BarChart3, HelpCircle, SlidersHorizontal
+    ThumbsUp, BarChart3, HelpCircle, SlidersHorizontal, Palette
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore'; // Điều chỉnh lại đường dẫn cho đúng với dự án của bạn
 
