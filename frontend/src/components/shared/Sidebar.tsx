@@ -316,6 +316,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
           )}
 
           {/* Khu vực Logo & Tiêu đề */}
+          {/* Khu vực Logo & Tiêu đề */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: collapsed ? 0 : 12, transition: "all 0.3s ease" }}>
 
             {/* Logo to ở trên khi mở rộng, thu nhỏ thành nút khi gập lại */}
@@ -341,11 +342,16 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
             </div>
 
             {/* Tên trường & Trung tâm (chỉ hiển thị khi mở rộng) */}
-            <div style={slideText({ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" })}>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0", lineHeight: 1.4, whiteSpace: "normal" }}>
+            <div style={{
+              ...slideText({ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }),
+              maxHeight: collapsed ? 0 : 100, /* Thu gọn chiều cao về 0 khi gập sidebar */
+              transition: `max-width ${T}, opacity ${T}, max-height ${T}`
+            }}>
+              {/* ĐỔI whiteSpace: "normal" thành "nowrap" ở cả 2 thẻ p */}
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0", lineHeight: 1.4, whiteSpace: "nowrap" }}>
                 {settings.schoolName}
               </p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "var(--brand)", margin: 0, opacity: 0.9, lineHeight: 1.4, whiteSpace: "normal" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "var(--brand)", margin: 0, opacity: 0.9, lineHeight: 1.4, whiteSpace: "nowrap" }}>
                 {settings.schoolDept}
               </p>
             </div>
