@@ -3,9 +3,12 @@ import { Menu, Sparkles, Moon, Sun } from "lucide-react";
 import ChatWindow from "@/components/chat/ChatWindow";
 import Sidebar from "@/components/shared/Sidebar";
 import { useChatStore } from "@/store/chatStore";
+import { useSettingsStore } from "@/store/settingsStore";
+
 
 export default function ChatPage() {
   const { activeId } = useChatStore();
+  const { settings, fetchSettings } = useSettingsStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -17,38 +20,24 @@ export default function ChatPage() {
   });
 
   useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
     localStorage.setItem("chat_theme_dark", String(chatDarkMode));
     localStorage.setItem("chat_theme_color", chatColor);
   }, [chatDarkMode, chatColor]);
 
   const themeStyles = chatDarkMode
     ? ({
-      "--bg-base": "#0a0f1c",
-      "--bg-1": "#141b2b",
-      "--bg-2": "#1e293b",
-      "--bg-3": "#334155",
-      "--text-primary": "#f1f5f9",
-      "--text-secondary": "#cbd5e1",
-      "--text-muted": "#94a3b8",
-      "--border": "#1e293b",
-      "--border-mid": "#334155",
-      "--sb-bg": "#0b1120",
-      "--brand": chatColor,
-      "--brand-glow": "rgba(26,95,180,0.25)",
+      // ...
+      "--brand": settings.themeColor || "#1a5fb4",
+      "--brand-glow": `${settings.themeColor || "#1a5fb4"}40`,
     } as React.CSSProperties)
     : ({
-      "--bg-base": "#ffffff",
-      "--bg-1": "#f9fafb",
-      "--bg-2": "#f1f5f9",
-      "--bg-3": "#e2e8f0",
-      "--text-primary": "#0f172a",
-      "--text-secondary": "#334155",
-      "--text-muted": "#64748b",
-      "--border": "#e2e8f0",
-      "--border-mid": "#cbd5e1",
-      "--sb-bg": "#f8fafc",
-      "--brand": chatColor,
-      "--brand-glow": "rgba(26,95,180,0.15)",
+      // ...
+      "--brand": settings.themeColor || "#1a5fb4",
+      "--brand-glow": `${settings.themeColor || "#1a5fb4"}26`,
     } as React.CSSProperties);
 
   return (

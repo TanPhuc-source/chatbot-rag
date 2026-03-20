@@ -10,18 +10,19 @@ import {
   LogOut,
   ChevronUp,
   X,
+  Sparkles
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import axios from "axios";
-
+import { useSettingsStore } from "@/store/settingsStore";
 import logoImage from "../images/images.jpg";
 
 const SCHOOL_INFO = {
-  LOGO_URL: logoImage,
-  NAME: "Trường Đại Học Đồng Tháp",
-  DEPT: "Trung Tâm Ngoại Ngữ Và Tin Học",
+  LOGO_URL: logoImage, // Đường dẫn đến logo của trường
+  schoolName: "Trường Đại học Đồng Tháp", // Tên trường
+  schoolDept: "Trung Tâm Ngoại Ngữ Và Tin Học" // Khoa/Phòng ban
 };
 
 interface Props {
@@ -33,6 +34,7 @@ interface Props {
 export default function Sidebar({ collapsed = false, onToggle, onClose }: Props) {
   // const { conversations, activeId, clearMessages, setActiveConversation } =
   //   useChatStore();
+  const { settings, fetchSettings } = useSettingsStore();
   const {
     conversations,
     activeId,
@@ -49,6 +51,10 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   useEffect(() => {
     init();
@@ -296,37 +302,52 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         }}
       >
         {/* Header */}
-        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: "18px 14px 14px", gap: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", height: 44 }}>
-            <div
+        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: collapsed ? "18px 14px 14px" : "24px 14px 14px", gap: 18, position: "relative" }}>
+
+          {/* Nút thu gọn (chỉ hiện khi Sidebar đang mở rộng) */}
+          {!collapsed && (
+            <button
               onClick={onToggle}
-              style={{
-                width: 44, height: 44, borderRadius: "50%", flexShrink: 0, border: "2px solid var(--border)",
-                overflow: "hidden", cursor: "pointer", padding: 2, background: "var(--bg-1)", transition: `all ${T}`,
-              }}
-              className="hover:scale-105 active:scale-95"
-              title="Thu gọn Sidebar"
+              style={{ position: "absolute", top: 12, right: 12, padding: 6, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)" }}
+              className="hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]"
             >
-              <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+              <ChevronLeft size={18} />
+            </button>
+          )}
+
+          {/* Khu vực Logo & Tiêu đề */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: collapsed ? 0 : 12, transition: "all 0.3s ease" }}>
+
+            {/* Logo to ở trên khi mở rộng, thu nhỏ thành nút khi gập lại */}
+            <div
+              onClick={collapsed ? onToggle : undefined}
+              style={{
+                width: collapsed ? 44 : 80,
+                height: collapsed ? 44 : 80,
+                borderRadius: collapsed ? "50%" : 20,
+                border: collapsed ? "2px solid var(--border)" : "none",
+                overflow: "hidden",
+                cursor: collapsed ? "pointer" : "default",
+                padding: collapsed ? 2 : 0,
+                background: "var(--bg-1)",
+                transition: "all 0.3s ease",
+                boxShadow: collapsed ? "none" : "0 8px 24px rgba(0,0,0,0.08)",
+                flexShrink: 0
+              }}
+              className={collapsed ? "hover:scale-105 active:scale-95" : ""}
+              title={collapsed ? "Mở rộng Sidebar" : undefined}
+            >
+              <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: collapsed ? "50%" : 20 }} />
             </div>
 
-            <div style={slideText({ display: "flex", alignItems: "center", flex: 1, paddingLeft: 12, gap: 6 })}>
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <p className="font-display" style={{ fontSize: 11, margin: 0, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase" }}>
-                  {SCHOOL_INFO.NAME}
-                </p>
-                <p style={{ margin: "2px 0 0 0", color: "var(--brand)", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textTransform: "uppercase" }}>
-                  {SCHOOL_INFO.DEPT}
-                </p>
-              </div>
-
-              <button
-                onClick={onToggle}
-                style={{ flexShrink: 0, padding: 6, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)", display: "flex", transition: "all 0.2s" }}
-                className="hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]"
-              >
-                <ChevronLeft size={18} />
-              </button>
+            {/* Tên trường & Trung tâm (chỉ hiển thị khi mở rộng) */}
+            <div style={slideText({ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" })}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0", lineHeight: 1.4, whiteSpace: "normal" }}>
+                {settings.schoolName}
+              </p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "var(--brand)", margin: 0, opacity: 0.9, lineHeight: 1.4, whiteSpace: "normal" }}>
+                {settings.schoolDept}
+              </p>
             </div>
           </div>
 
@@ -375,8 +396,8 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
                   <button
                     className="flex items-center justify-center p-1.5 rounded-md text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 bg-transparent border-none cursor-pointer transition-colors"
                     onClick={(e) => {
+                      e.preventDefault(); // <-- THÊM DÒNG NÀY ĐỂ CHỐNG RELOAD TRANG
                       e.stopPropagation();
-                      // --- THÊM LOGIC XÓA Ở ĐÂY ---
                       const token = localStorage.getItem("access_token");
                       if (token) {
                         deleteConversation(conv.id, token);
