@@ -21,6 +21,22 @@ import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
 import ResetPasswordPage from './auth/ResetPasswordPage';
 
 
+// Khởi tạo auth từ localStorage một lần duy nhất cho toàn app
+// Đặt ở App level để mọi guard đều thấy trạng thái đúng sau F5
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const { init } = useAuthStore();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    init();
+    setReady(true);
+  }, []);
+
+  // Chờ restore xong mới render để tránh flash redirect sai
+  if (!ready) return null;
+  return <>{children}</>;
+}
+
 // Guard cho các route admin — chỉ cho vào nếu đã login và có role admin
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, role } = useAuthStore();
@@ -29,19 +45,9 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Root: chờ init() xong rồi mới quyết định redirect
+// Root redirect
 function RootRedirect() {
-  const { init, isLoggedIn, role } = useAuthStore();
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    init();
-    setReady(true);
-  }, []);
-
-  // Chưa restore xong → không render gì để tránh flash
-  if (!ready) return null;
-
+  const { isLoggedIn, role } = useAuthStore();
   if (isLoggedIn && role === 'admin') {
     return <Navigate to="/admin/analytics" replace />;
   }
@@ -52,6 +58,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <AuthInitializer>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
@@ -79,6 +86,7 @@ export default function App() {
             <Route path="settings" element={<SettingPage />} />
           </Route>
         </Routes>
+        </AuthInitializer>
       </BrowserRouter>
     </ThemeProvider>
   );
