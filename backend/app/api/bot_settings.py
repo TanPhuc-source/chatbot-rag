@@ -49,7 +49,13 @@ class SettingsIn(BaseModel):
 def get_or_create_settings(db: Session) -> models.BotSettings:
     s = db.query(models.BotSettings).filter(models.BotSettings.id == 1).first()
     if not s:
-        s = models.BotSettings(id=1)
+        s = models.BotSettings(
+            id=1,
+            bot_name="Trợ lý ĐH Đồng Tháp",
+            system_prompt=DEFAULT_PROMPT,
+            temperature=0.3,
+            max_tokens=1024,
+        )
         db.add(s)
         db.commit()
         db.refresh(s)

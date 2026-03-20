@@ -86,7 +86,7 @@ export default function BotSettingsPage() {
             if (!res.ok) throw new Error('Không thể tải cấu hình');
             const data: Settings = await res.json();
             setSettings(data);
-            setForm({ bot_name: data.bot_name, system_prompt: data.system_prompt, temperature: data.temperature, max_tokens: data.max_tokens });
+            setForm({ bot_name: data.bot_name ?? '', system_prompt: data.system_prompt ?? '', temperature: data.temperature ?? 0.3, max_tokens: data.max_tokens ?? 1024 });
             setIsDirty(false);
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsLoading(false); }
@@ -125,7 +125,7 @@ export default function BotSettingsPage() {
             if (!res.ok) throw new Error('Reset thất bại');
             const data = await res.json();
             setSettings(data);
-            setForm({ bot_name: data.bot_name, system_prompt: data.system_prompt, temperature: data.temperature, max_tokens: data.max_tokens });
+            setForm({ bot_name: data.bot_name ?? '', system_prompt: data.system_prompt ?? '', temperature: data.temperature ?? 0.3, max_tokens: data.max_tokens ?? 1024 });
             setIsDirty(false);
             addToast('Đã reset về mặc định', 'info');
         } catch (e: any) { addToast(e.message, 'error'); }
