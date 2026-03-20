@@ -1,6 +1,7 @@
-// src/store/settingsStore.ts
 import { create } from 'zustand';
 import axios from 'axios';
+
+const API = 'http://127.0.0.1:8000';
 
 interface SystemSettings {
     themeColor: string;
@@ -12,7 +13,6 @@ interface SystemSettings {
     faq2: string;
     faq3: string;
     faq4: string;
-    // Bạn có thể thêm logoUrl sau nếu backend hỗ trợ upload file
 }
 
 interface SettingsState {
@@ -20,6 +20,7 @@ interface SettingsState {
     isLoading: boolean;
     fetchSettings: () => Promise<void>;
     updateSettings: (newSettings: Partial<SystemSettings>, token: string) => Promise<void>;
+    resetSettings: (token: string) => Promise<void>;
 }
 
 const defaultSettings: SystemSettings = {
@@ -41,8 +42,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     fetchSettings: async () => {
         set({ isLoading: true });
         try {
-            // Thay bằng endpoint thực tế của bạn
-            const res = await axios.get("http://127.0.0.1:8000/settings");
+            const res = await axios.get(`${API}/ui-settings`);
             if (res.data) {
                 set({ settings: { ...defaultSettings, ...res.data } });
             }
@@ -56,16 +56,31 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     updateSettings: async (newSettings, token) => {
         set({ isLoading: true });
         try {
-            // Gọi API cập nhật cấu hình
-            await axios.put("http://127.0.0.1:8000/settings", newSettings, {
+            const res = await axios.put(`${API}/ui-settings`, newSettings, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            set((state) => ({ settings: { ...state.settings, ...newSettings } }));
+            // Dùng data trả về từ server để đảm bảo đồng bộ
+            set({ settings: { ...defaultSettings, ...res.data } });
         } catch (error) {
             console.error("Lỗi khi cập nhật cài đặt:", error);
             throw error;
         } finally {
             set({ isLoading: false });
         }
-    }
+    },
+
+    resetSettings: async (token) => {
+        set({ isLoading: true });
+        try {
+            const res = await axios.post(`${API}/ui-settings/reset`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            set({ settings: { ...defaultSettings, ...res.data } });
+        } catch (error) {
+            console.error("Lỗi khi reset cài đặt:", error);
+            throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
 }));

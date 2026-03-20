@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-// Import ThemeProvider vừa tạo
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 import AdminLayout from '@/pages/AdminLayout';
@@ -16,19 +15,32 @@ import LoginPage from '@/pages/LoginPage';
 import ProfilePage from '@/pages/ProfilePage';
 import UserProfilePage from '@/pages/UserProfilePage';
 import ChatPage from '@/pages/ChatPage';
-// Import trang Settings mới
 import SettingPage from '@/pages/SettingPage';
 import DocumentChunksPage from '@/pages/DocumentChunksPage';
 import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
 import ResetPasswordPage from './auth/ResetPasswordPage';
 
 
-// Redirect admin → /admin/analytics, user → ChatPage
+// Guard cho các route admin — chỉ cho vào nếu đã login và có role admin
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn, role } = useAuthStore();
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+// Root: chờ init() xong rồi mới quyết định redirect
 function RootRedirect() {
   const { init, isLoggedIn, role } = useAuthStore();
+  const [ready, setReady] = useState(false);
 
-  // Đảm bảo init() đã chạy để restore token từ localStorage
-  useEffect(() => { init(); }, []);
+  useEffect(() => {
+    init();
+    setReady(true);
+  }, []);
+
+  // Chưa restore xong → không render gì để tránh flash
+  if (!ready) return null;
 
   if (isLoggedIn && role === 'admin') {
     return <Navigate to="/admin/analytics" replace />;
@@ -38,7 +50,6 @@ function RootRedirect() {
 
 export default function App() {
   return (
-    // Bọc ứng dụng bằng ThemeProvider
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
@@ -49,7 +60,14 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route
+            path="/admin"
+            element={
+              <AdminGuard>
+                <AdminLayout />
+              </AdminGuard>
+            }
+          >
             <Route index element={<AdminDashboard />} />
             <Route path="accounts" element={<AccountManagementPage />} />
             <Route path="records" element={<AdminRecordsPage />} />
@@ -58,9 +76,7 @@ export default function App() {
             <Route path="feedback" element={<FeedbackPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="bot-settings" element={<BotSettingsPage />} />
-            {/* Khai báo Route cho trang Cài đặt chung */}
             <Route path="settings" element={<SettingPage />} />
-
           </Route>
         </Routes>
       </BrowserRouter>
