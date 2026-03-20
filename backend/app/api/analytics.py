@@ -65,8 +65,8 @@ def get_summary(
 
     total_sessions = db.query(func.count(models.ChatSession.id)).scalar()
     total_messages = db.query(func.count(models.ChatMessage.id)).scalar()
-    total_users = db.query(func.count(func.distinct(models.ChatSession.user_id))).filter(
-        models.ChatSession.user_id.isnot(None)
+    total_users = db.query(func.count(models.User.id)).filter(
+        models.User.role != "admin"
     ).scalar()
 
     sessions_today = db.query(func.count(models.ChatSession.id)).filter(
@@ -289,7 +289,12 @@ def export_chat_history(
     )
 
     if days:
-        since = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")) - timedelta(days=days)
+        vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+        now_vn = datetime.now(vn_tz)
+        if days == 1:
+            since = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            since = now_vn - timedelta(days=days)
         q = q.filter(models.ChatMessage.created_at >= since)
 
     rows = q.order_by(models.ChatMessage.created_at).all()

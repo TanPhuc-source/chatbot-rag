@@ -227,6 +227,36 @@ function TrendLineChart({ data, days }: { data: { date: string; thumbs_up: numbe
         );
     }
 
+    // Chỉ 1 ngày — không đủ để vẽ đường xu hướng, hiển thị dạng summary
+    if (data.length === 1) {
+        const d = data[0];
+        const total = d.thumbs_up + d.thumbs_down || 1;
+        const pct = Math.round((d.thumbs_up / total) * 100);
+        return (
+            <div className="flex flex-col items-center justify-center h-[160px] gap-4">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Chỉ có dữ liệu 1 ngày ({d.date.slice(5)}) — cần thêm ngày để vẽ đường xu hướng
+                </p>
+                <div className="flex items-center gap-6">
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl font-bold text-green-500">{d.thumbs_up}</span>
+                        <span className="text-xs text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"/>Hữu ích</span>
+                    </div>
+                    <div className="text-3xl font-light text-slate-200 dark:text-slate-700">|</div>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl font-bold text-red-500">{d.thumbs_down}</span>
+                        <span className="text-xs text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>Không hữu ích</span>
+                    </div>
+                    <div className="text-3xl font-light text-slate-200 dark:text-slate-700">|</div>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl font-bold text-indigo-500">{pct}%</span>
+                        <span className="text-xs text-slate-400">Tỷ lệ hữu ích</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="relative">
             <canvas ref={canvasRef} style={{ width: '100%', height: '160px', display: 'block' }} />
@@ -397,16 +427,18 @@ export default function AnalyticsPage() {
     const handleExport = async () => {
         setIsExporting(true);
         try {
-            const res = await fetch(`${API}/analytics/export`, { headers: { Authorization: `Bearer ${token}` } });
+            const daysParam = `?days=${selectedDays}`;
+            const res = await fetch(`${API}/analytics/export${daysParam}`, { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) throw new Error('Export thất bại');
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `chat_history_${new Date().toISOString().slice(0, 10)}.csv`;
+            const rangeLabel = rangeLabelShort.replace(' ', '_');
+            a.download = `chat_history_${rangeLabel}_${new Date().toISOString().slice(0, 10)}.csv`;
             a.click();
             URL.revokeObjectURL(url);
-            addToast('Đã xuất file CSV');
+            addToast(`Đã xuất file CSV (${rangeLabelShort})`);
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsExporting(false); }
     };
