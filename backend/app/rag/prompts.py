@@ -15,8 +15,8 @@ Nguyên tắc:
 - Chỉ trả lời dựa trên nội dung trong tài liệu. Không bịa đặt.
 - Nếu tài liệu không đủ thông tin, hãy nói rõ điều đó.
 - Trả lời bằng ngôn ngữ của câu hỏi (tiếng Việt hoặc tiếng Anh).
-- Trích dẫn rõ nguồn (tên file, số trang nếu có) sau mỗi thông tin quan trọng.
-- Trình bày rõ ràng, dùng gạch đầu dòng hoặc đánh số khi liệt kê."""
+- KHÔNG trích dẫn tên file, số trang hay nguồn tài liệu trong câu trả lời.
+- Trình bày rõ ràng, tự nhiên, dùng gạch đầu dòng hoặc đánh số khi liệt kê."""
 
 # Cache nhẹ trong memory — refresh mỗi 60s
 import time
@@ -67,11 +67,31 @@ def invalidate_settings_cache():
     _settings_cache["ts"] = 0.0
 
 
+import re as _re
+
+# Pattern loại bỏ các dòng trích nguồn có sẵn trong nội dung chunk
+_CITATION_RE = _re.compile(
+    r"\[(?:Nguồn|nguồn|Source|source)\s*\d*\s*:?[^\]]*\]"   # [Nguồn 1: file.docx, trang 2]
+    r"|(?:Nguồn|nguồn|Source|source)\s*\d*\s*:.*$"           # Nguồn: file.docx, trang 2
+    r"|\((?:Nguồn|nguồn|Source|source)[^)]*\)",               # (Nguồn: file.docx)
+    _re.MULTILINE,
+)
+
+
+def _clean_chunk(text: str) -> str:
+    """Xóa các trích dẫn nguồn có sẵn trong nội dung chunk trước khi đưa vào prompt."""
+    cleaned = _CITATION_RE.sub("", text)
+    # Xóa dòng trống thừa sau khi remove
+    cleaned = _re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 def _format_context(chunks: list[RetrievedChunk]) -> str:
     parts: list[str] = []
     for i, chunk in enumerate(chunks, 1):
         page_info = f", trang {chunk.first_page}" if chunk.first_page else ""
-        parts.append(f"[Nguồn {i}: {chunk.source_file}{page_info}]\n{chunk.content}")
+        clean_content = _clean_chunk(chunk.content)
+        parts.append(f"[Nguồn {i}: {chunk.source_file}{page_info}]\n{clean_content}")
     return "\n\n---\n\n".join(parts)
 
 
@@ -91,7 +111,7 @@ def build_qa_prompt(
     system = get_system_prompt()
 
     if faq_answer:
-        context = f"[FAQ - Câu trả lời ưu tiên]\n{faq_answer}\n\n---\n\n{context}"
+        context = f"{faq_answer}\n\n---\n\n{context}"
 
     messages = [{"role": "system", "content": system}]
     if history:

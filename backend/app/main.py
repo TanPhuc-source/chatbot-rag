@@ -12,6 +12,7 @@ from app.core.exceptions import register_exception_handlers
 from app.db.database import Base, engine
 from app.rag.embeddings import get_embedding_provider
 from app.rag.llm_provider import get_llm_provider
+from app.rag.reranker import _get_ranker
 from app.utils.logger import logger
 
 
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting RAG Edu backend...")
     get_embedding_provider()
     get_llm_provider()
+    _get_ranker()   # warm up reranker ngay lúc khởi động, tránh delay 5s ở request đầu tiên
     logger.info("✅ Models loaded. Ready to serve.")
     yield
     logger.info("👋 Shutting down.")

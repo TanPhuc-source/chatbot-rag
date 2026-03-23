@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 
 const uid = () => crypto.randomUUID();
@@ -14,6 +14,12 @@ export function useChat() {
 
   const { streamChat } = useStream();
   const convIdRef = useRef<string | null>(activeId);
+
+  // ✅ FIX: Đồng bộ convIdRef mỗi khi activeId thay đổi
+  // useRef chỉ khởi tạo 1 lần khi mount, nên cần useEffect để cập nhật
+  useEffect(() => {
+    convIdRef.current = activeId;
+  }, [activeId]);
 
   const sendMessage = useCallback(
     async (question: string) => {

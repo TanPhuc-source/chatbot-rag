@@ -40,8 +40,8 @@ class Settings(BaseSettings):
     # ── RAG tuning ────────────────────────────────────────────
     CHUNK_MAX_CHARS: int = 1000
     CHUNK_MAX_OVERLAP: int = 200
-    RETRIEVER_TOP_K: int = 10        # lấy nhiều trước khi rerank
-    RERANKER_TOP_N: int = 4          # sau rerank còn lại bao nhiêu
+    RETRIEVER_TOP_K: int = 5        # lấy nhiều trước khi rerank
+    RERANKER_TOP_N: int = 3          # sau rerank còn lại bao nhiêu
 
     # ── RAG Advanced Features ─────────────────────────────────
     # HyDE: embed hypothetical answer thay vì embed query trực tiếp

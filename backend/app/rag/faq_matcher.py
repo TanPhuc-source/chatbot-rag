@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from app.utils.logger import logger
 
 # Ngưỡng similarity — câu hỏi giống FAQ trên 75% thì dùng FAQ
-FAQ_SIMILARITY_THRESHOLD = 0.75
+FAQ_SIMILARITY_THRESHOLD = 0.85
 
 # Cache FAQ embeddings trong memory, refresh mỗi 120s (khi admin thêm/sửa FAQ)
 _faq_cache: dict = {

@@ -4,7 +4,6 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { Sparkles, Copy, Check, ThumbsUp, ThumbsDown } from "lucide-react";
 import type { Message } from "@/types";
-import SourceCard from "./SourceCard";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -269,10 +268,7 @@ export default function MessageBubble({ message }: Props) {
             paddingLeft: 4,
           }}
         >
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {!message.isStreaming &&
-              message.sources?.map((src, i) => <SourceCard key={i} source={src} />)}
-          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }} />
           {!message.isStreaming && (
             <div style={{ display: "flex", gap: 6 }}>
               {message.dbId && <FeedbackButtons messageId={message.dbId} />}
