@@ -102,6 +102,7 @@ export default function LoginPage() {
 
                 setTimeout(() => {
                     if (role === 'admin') navigate('/admin/analytics');
+                    else if (role === 'staff') navigate('/admin/records');
                     else navigate('/');
                 }, 1200)
 

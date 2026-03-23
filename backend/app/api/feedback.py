@@ -13,7 +13,7 @@ from datetime import datetime
 
 from app.db.database import get_db
 from app.db import models
-from app.core.db_dependencies import get_admin_user
+from app.core.db_dependencies import get_admin_user, get_staff_user
 
 router = APIRouter()
 
@@ -81,7 +81,7 @@ def admin_list_feedback(
     skip: int = 0,
     limit: int = 100,
     rating: Optional[str] = None,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     q = db.query(models.MessageFeedback).order_by(models.MessageFeedback.created_at.desc())

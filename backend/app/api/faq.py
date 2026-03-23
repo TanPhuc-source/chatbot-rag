@@ -16,7 +16,7 @@ from datetime import datetime
 from app.db.database import get_db
 from app.rag.faq_matcher import invalidate_faq_cache
 from app.db import models
-from app.core.db_dependencies import get_admin_user
+from app.core.db_dependencies import get_admin_user, get_staff_user
 
 router = APIRouter()
 
@@ -50,7 +50,7 @@ def list_faqs(db: Session = Depends(get_db)):
 
 @router.get("/admin", response_model=list[FAQOut])
 def admin_list_faqs(
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Admin xem tất cả FAQ kể cả inactive."""
@@ -60,7 +60,7 @@ def admin_list_faqs(
 @router.post("/admin", response_model=FAQOut)
 def create_faq(
     body: FAQIn,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     faq = models.FAQ(**body.model_dump(), created_by=current_user.id)
@@ -75,7 +75,7 @@ def create_faq(
 def update_faq(
     faq_id: int,
     body: FAQIn,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     faq = db.query(models.FAQ).filter(models.FAQ.id == faq_id).first()
@@ -92,7 +92,7 @@ def update_faq(
 @router.delete("/admin/{faq_id}")
 def delete_faq(
     faq_id: int,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     faq = db.query(models.FAQ).filter(models.FAQ.id == faq_id).first()
@@ -107,7 +107,7 @@ def delete_faq(
 @router.patch("/admin/{faq_id}/toggle", response_model=FAQOut)
 def toggle_faq(
     faq_id: int,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     faq = db.query(models.FAQ).filter(models.FAQ.id == faq_id).first()

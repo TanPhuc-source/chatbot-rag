@@ -37,23 +37,29 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Guard cho các route admin — chỉ cho vào nếu đã login và có role admin
+// Guard cho các route admin — cho vào nếu đã login và có role admin hoặc staff
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, role } = useAuthStore();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-  if (role !== 'admin') return <Navigate to="/" replace />;
+  if (role !== 'admin' && role !== 'staff') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+// Guard chỉ dành cho admin — staff bị redirect về /admin/records
+function AdminOnlyGuard({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn, role } = useAuthStore();
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (role !== 'admin') return <Navigate to="/admin/records" replace />;
   return <>{children}</>;
 }
 
 // Root redirect
 function RootRedirect() {
   const { isLoggedIn, role } = useAuthStore();
-  if (isLoggedIn && role === 'admin') {
-    return <Navigate to="/admin/analytics" replace />;
-  }
+  if (isLoggedIn && role === 'admin') return <Navigate to="/admin/analytics" replace />;
+  if (isLoggedIn && role === 'staff') return <Navigate to="/admin/records" replace />;
   return <ChatPage />;
 }
-
 export default function App() {
   return (
     <ThemeProvider>
@@ -75,15 +81,15 @@ export default function App() {
               </AdminGuard>
             }
           >
-            <Route index element={<AdminDashboard />} />
-            <Route path="accounts" element={<AccountManagementPage />} />
+            <Route index element={<AdminOnlyGuard><AdminDashboard /></AdminOnlyGuard>} />
+            <Route path="accounts" element={<AdminOnlyGuard><AccountManagementPage /></AdminOnlyGuard>} />
             <Route path="records" element={<AdminRecordsPage />} />
             <Route path="records/:documentId/chunks" element={<DocumentChunksPage />} />
             <Route path="faq" element={<FAQPage />} />
             <Route path="feedback" element={<FeedbackPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="bot-settings" element={<BotSettingsPage />} />
-            <Route path="settings" element={<SettingPage />} />
+            <Route path="analytics" element={<AdminOnlyGuard><AnalyticsPage /></AdminOnlyGuard>} />
+            <Route path="bot-settings" element={<AdminOnlyGuard><BotSettingsPage /></AdminOnlyGuard>} />
+            <Route path="settings" element={<AdminOnlyGuard><SettingPage /></AdminOnlyGuard>} />
           </Route>
         </Routes>
         </AuthInitializer>

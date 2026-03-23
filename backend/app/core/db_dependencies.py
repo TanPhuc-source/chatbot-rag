@@ -49,3 +49,15 @@ def get_admin_user(
             detail="Bạn không có quyền thực hiện hành động này",
         )
     return current_user
+
+
+def get_staff_user(
+    current_user: models.User = Depends(get_current_db_user),
+) -> models.User:
+    """Cho phép cả admin lẫn staff — dùng cho các endpoint nhân viên được phép truy cập."""
+    if current_user.role not in ("admin", "staff"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bạn không có quyền thực hiện hành động này",
+        )
+    return current_user

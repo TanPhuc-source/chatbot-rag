@@ -161,14 +161,22 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
                     {currentUser?.role === 'admin' && (
                         <SidebarItem icon={ShieldCheck} label="Quản lý tài khoản" path="/admin/accounts" />
                     )}
-                    <SidebarItem icon={LayoutDashboard} label="Quản lý Chatbot" path="/admin" />
+                    {currentUser?.role === 'admin' && (
+                        <SidebarItem icon={LayoutDashboard} label="Quản lý Chatbot" path="/admin" />
+                    )}
                     <SidebarItem icon={FolderOpen} label="Quản lý hồ sơ tài liệu" path="/admin/records" />
                     <SidebarItem icon={HelpCircle} label="Quản lý FAQ" path="/admin/faq" />
                     <SidebarItem icon={ThumbsUp} label="Phản hồi người dùng" path="/admin/feedback" />
-                    <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot" path="/admin/bot-settings" />
+                    {currentUser?.role === 'admin' && (
+                        <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot" path="/admin/bot-settings" />
+                    )}
 
-                    <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2 mt-8 tracking-widest font-sans">Hệ thống</p>
-                    <SidebarItem icon={Settings} label="Cài đặt chung" path="/admin/settings" />
+                    {currentUser?.role === 'admin' && (
+                        <>
+                            <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2 mt-8 tracking-widest font-sans">Hệ thống</p>
+                            <SidebarItem icon={Settings} label="Cài đặt chung" path="/admin/settings" />
+                        </>
+                    )}
                 </div>
 
                 <div className="relative p-4 border-t border-slate-100 dark:border-[#2a2a2a] bg-slate-50/50 dark:bg-[#0f0f0f]">

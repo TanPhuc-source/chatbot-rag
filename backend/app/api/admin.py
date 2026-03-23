@@ -20,7 +20,7 @@ from datetime import datetime
 from app.db.database import get_db
 from app.db import models
 from app.api.auth import UserResponse, hash_password
-from app.core.db_dependencies import get_admin_user
+from app.core.db_dependencies import get_admin_user, get_staff_user
 
 router = APIRouter()
 
@@ -66,7 +66,7 @@ class AdminUserCreate(BaseModel):
 def get_all_documents(
     skip: int = 0,
     limit: int = 100,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     return db.query(models.Document)\
@@ -77,7 +77,7 @@ def get_all_documents(
 @router.delete("/documents/{document_id}")
 def delete_document(
     document_id: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     doc = db.query(models.Document).filter(models.Document.id == document_id).first()
@@ -134,7 +134,7 @@ def update_user_role(
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
-    if role_update.role not in ["user", "admin"]:
+    if role_update.role not in ["user", "admin", "staff"]:
         raise HTTPException(status_code=400, detail="Role không hợp lệ")
 
     user = db.query(models.User).filter(models.User.id == user_id).first()

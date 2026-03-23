@@ -36,6 +36,9 @@ from app.utils.logger import logger
 # Ngưỡng score tối thiểu — chunk dưới ngưỡng này bị bỏ qua
 RELEVANCE_THRESHOLD = 0.15
 
+# Ngưỡng FAQ direct — similarity >= mức này thì trả lời thẳng từ FAQ, bỏ qua retrieve+rerank+LLM
+FAQ_DIRECT_THRESHOLD = 0.92
+
 # ── Chitchat patterns ──────────────────────────────────────────────────────────
 # Các pattern hội thoại thông thường không cần tra tài liệu
 _CHITCHAT_PATTERNS = [
@@ -340,7 +343,13 @@ async def answer(
         answer_text = await _chitchat_response(question, history)
         return RAGResponse(answer=answer_text, sources=[], chunks_used=0)
 
-    # 0.5. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
+    # 0.5. FAQ direct match — bypass toàn bộ pipeline nếu similarity rất cao
+    faq_direct = find_matching_faq(question)
+    if faq_direct and faq_direct.similarity >= FAQ_DIRECT_THRESHOLD:
+        logger.info(f"FAQ direct hit (similarity={faq_direct.similarity:.3f}): '{faq_direct.question[:60]}'")
+        return RAGResponse(answer=faq_direct.answer, sources=[], chunks_used=0)
+
+    # 0.6. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
     retrieval_query = question
     if history and _is_ambiguous_query(question):
         retrieval_query = await _rewrite_query_with_context(question, history)
@@ -402,7 +411,17 @@ async def stream_answer(
         yield RAGResponse(answer=full_answer, sources=[], chunks_used=0)
         return
 
-    # 0.5. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
+    # 0.5. FAQ direct match — bypass toàn bộ pipeline nếu similarity rất cao
+    faq_direct = find_matching_faq(question)
+    if faq_direct and faq_direct.similarity >= FAQ_DIRECT_THRESHOLD:
+        logger.info(f"FAQ direct hit (similarity={faq_direct.similarity:.3f}): '{faq_direct.question[:60]}'")
+        words = faq_direct.answer.split(" ")
+        for i, word in enumerate(words):
+            yield word if i == 0 else " " + word
+        yield RAGResponse(answer=faq_direct.answer, sources=[], chunks_used=0)
+        return
+
+    # 0.6. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
     retrieval_query = question
     if history and _is_ambiguous_query(question):
         retrieval_query = await _rewrite_query_with_context(question, history)
