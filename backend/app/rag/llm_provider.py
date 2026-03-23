@@ -3,6 +3,8 @@ LLM Provider — chuyển đổi qua biến môi trường LLM_PROVIDER
 
 LLM_PROVIDER=groq   → Groq API (nhanh, rẻ, mặc định)
 LLM_PROVIDER=ollama → Ollama local (khi có RAM đủ)
+LLM_PROVIDER=openai → OpenAI GPT (gpt-4o, gpt-4o-mini, ...)
+LLM_PROVIDER=gemini → Google Gemini (gemini-2.0-flash, gemini-1.5-pro, ...)
 """
 from __future__ import annotations
 
@@ -104,6 +106,135 @@ class OllamaProvider(BaseLLMProvider):
                 yield content
 
 
+# ── OpenAI ─────────────────────────────────────────────────────────────────
+class OpenAIProvider(BaseLLMProvider):
+    """
+    OpenAI — GPT-4o, GPT-4o-mini, o1, ...
+    Cài: pip install openai
+    Model đề xuất: gpt-4o-mini (rẻ, nhanh), gpt-4o (mạnh nhất)
+    """
+
+    def __init__(self) -> None:
+        from openai import AsyncOpenAI
+
+        settings = get_settings()
+        if not settings.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY chưa được cấu hình trong .env")
+
+        self._client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self._model = settings.OPENAI_MODEL
+        logger.info(f"LLM Provider: OpenAI ({self._model})")
+
+    async def chat(self, messages: list[dict], **kwargs) -> str:
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=kwargs.get("temperature", 0.1),
+            max_tokens=kwargs.get("max_tokens", 2048),
+        )
+        return response.choices[0].message.content
+
+    async def stream(self, messages: list[dict], **kwargs) -> AsyncIterator[str]:
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=kwargs.get("temperature", 0.1),
+            max_tokens=kwargs.get("max_tokens", 2048),
+            stream=True,
+        )
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+
+
+# ── Gemini ─────────────────────────────────────────────────────────────────
+class GeminiProvider(BaseLLMProvider):
+    """
+    Google Gemini — gemini-2.0-flash, gemini-1.5-pro, ...
+    Cài: pip install google-genai
+    Model đề xuất: gemini-2.0-flash (nhanh, rẻ), gemini-1.5-pro (mạnh)
+
+    Lưu ý: Gemini dùng format message khác — role chỉ có "user" và "model"
+    (không có "assistant"). Provider này tự convert trước khi gửi.
+    """
+
+    def __init__(self) -> None:
+        from google import genai
+        from google.genai import types
+
+        settings = get_settings()
+        if not settings.GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY chưa được cấu hình trong .env")
+
+        self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        self._model = settings.GEMINI_MODEL
+        self._types = types
+        logger.info(f"LLM Provider: Gemini ({self._model})")
+
+    def _convert_messages(self, messages: list[dict]) -> tuple[str | None, list]:
+        """
+        Convert từ format OpenAI sang format Gemini.
+        - system message → tách riêng thành system_instruction
+        - user/assistant → contents list với role "user"/"model"
+        """
+        system_instruction = None
+        contents = []
+
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+
+            if role == "system":
+                system_instruction = content
+            elif role == "user":
+                contents.append(self._types.Content(
+                    role="user",
+                    parts=[self._types.Part(text=content)],
+                ))
+            elif role == "assistant":
+                # Gemini dùng "model" thay vì "assistant"
+                contents.append(self._types.Content(
+                    role="model",
+                    parts=[self._types.Part(text=content)],
+                ))
+
+        return system_instruction, contents
+
+    async def chat(self, messages: list[dict], **kwargs) -> str:
+        system_instruction, contents = self._convert_messages(messages)
+
+        config = self._types.GenerateContentConfig(
+            temperature=kwargs.get("temperature", 0.1),
+            max_output_tokens=kwargs.get("max_tokens", 2048),
+            system_instruction=system_instruction,
+        )
+
+        response = await self._client.aio.models.generate_content(
+            model=self._model,
+            contents=contents,
+            config=config,
+        )
+        return response.text
+
+    async def stream(self, messages: list[dict], **kwargs) -> AsyncIterator[str]:
+        system_instruction, contents = self._convert_messages(messages)
+
+        config = self._types.GenerateContentConfig(
+            temperature=kwargs.get("temperature", 0.1),
+            max_output_tokens=kwargs.get("max_tokens", 2048),
+            system_instruction=system_instruction,
+        )
+
+        async for chunk in await self._client.aio.models.generate_content_stream(
+            model=self._model,
+            contents=contents,
+            config=config,
+        ):
+            if chunk.text:
+                yield chunk.text
+
+
 # ── Factory ────────────────────────────────────────────────────────────────
 @lru_cache(maxsize=1)
 def get_llm_provider() -> BaseLLMProvider:
@@ -114,8 +245,10 @@ def get_llm_provider() -> BaseLLMProvider:
     settings = get_settings()
 
     providers: dict[str, type[BaseLLMProvider]] = {
-        "groq": GroqProvider,
+        "groq":   GroqProvider,
         "ollama": OllamaProvider,
+        "openai": OpenAIProvider,
+        "gemini": GeminiProvider,
     }
 
     provider_cls = providers.get(settings.LLM_PROVIDER)
