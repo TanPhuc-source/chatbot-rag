@@ -25,9 +25,24 @@ import PermissionsPage from '@/pages/PermissionsPage';
 const API = 'http://127.0.0.1:8000';
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const { init } = useAuthStore();
+  const { init, logout } = useAuthStore();
   const [ready, setReady] = useState(false);
-  useEffect(() => { init(); setReady(true); }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      init(); // không có token, init bình thường
+      setReady(true);
+      return;
+    }
+    // Verify token với backend
+    axios.get(`${API}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(() => { init(); setReady(true); })
+      .catch(() => { logout(); setReady(true); }); // token hết hạn → logout
+  }, []);
+
   if (!ready) return null;
   return <>{children}</>;
 }

@@ -133,8 +133,8 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
 
                     {/* Chờ permissions load xong rồi mới render — tránh nhảy thứ tự */}
                     {permissionsReady && <>
-                        {isAdmin          && <SidebarItem icon={LayoutDashboard}    label="Quản lý Chatbot"          path="/admin" />}
-                        {can('analytics') && <SidebarItem icon={BarChart3}          label="Thống kê & Báo cáo"       path="/admin/analytics" />}
+                        {isAdmin          && <SidebarItem icon={LayoutDashboard}    label="Thống kê & Báo cáo"          path="/admin/analytics" />}
+                        {can('analytics') && <SidebarItem icon={BarChart3}          label="Quản lý Chatbot"       path="/admin" />}
                         {can('accounts')  && <SidebarItem icon={ShieldCheck}        label="Quản lý tài khoản"        path="/admin/accounts" />}
                         {can('records')   && <SidebarItem icon={FolderOpen}         label="Quản lý hồ sơ tài liệu"  path="/admin/records" />}
                         {can('faq')       && <SidebarItem icon={HelpCircle}         label="Quản lý FAQ"              path="/admin/faq" />}
