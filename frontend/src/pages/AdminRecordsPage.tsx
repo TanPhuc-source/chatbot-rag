@@ -9,6 +9,7 @@ import {
     LogOut, Layers, Clock, AlertTriangle, Info,
     Eye, BookOpen, Hash, BookMarked, Download, Edit3
 } from 'lucide-react';
+import FormTemplatesTab from '@/pages/FormTemplatesTab';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,9 @@ export default function AdminRecordsPage() {
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+
+    // Tab switcher
+    const [activeTab, setActiveTab] = useState<'documents' | 'forms'>('documents');
 
     // --- Auth guard ---
     useEffect(() => {
@@ -605,6 +609,35 @@ export default function AdminRecordsPage() {
                             ))}
                         </div>
 
+                        {/* --- TAB SWITCHER --- */}
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-1 w-fit shadow-sm transition-colors">
+                            <button
+                                onClick={() => setActiveTab('documents')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                                    ${activeTab === 'documents'
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                            >
+                                <Database size={15} /> Tài liệu RAG
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('forms')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                                    ${activeTab === 'forms'
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                            >
+                                <FileText size={15} /> Biểu mẫu & Đơn từ
+                            </button>
+                        </div>
+
+                        {/* --- TAB CONTENT --- */}
+                        <AnimatePresence mode="wait">
+                        {activeTab === 'documents' ? (
+                        <motion.div key="documents"
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.15 }}
+                        >
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                             {/* --- LEFT: UPLOAD --- */}
                             <div className="lg:col-span-4 space-y-4">
@@ -846,7 +879,18 @@ export default function AdminRecordsPage() {
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </div>{/* end grid cols-12 */}
+                        </motion.div>
+                        ) : (
+                        <motion.div key="forms"
+                            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.15 }}
+                        >
+                            <FormTemplatesTab />
+                        </motion.div>
+                        )}
+                        </AnimatePresence>
+
                     </div>
                 </div>
             </main>

@@ -158,3 +158,22 @@ class UserPermission(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="permissions")
+
+# ── Thêm vào cuối file app/db/models.py ───────────────────────────────────
+
+class FormTemplate(Base):
+    """Biểu mẫu / đơn từ — admin upload, bot có thể trả link cho người dùng."""
+    __tablename__ = "form_templates"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    display_name = Column(String, nullable=False)          # "Đơn xin đổi lịch học"
+    description  = Column(Text, nullable=True)             # mô tả ngắn (tuỳ chọn)
+    filename     = Column(String, nullable=False)          # tên file thực trên disk
+    file_path    = Column(String, nullable=False)          # "static/forms/..."
+    file_type    = Column(String, nullable=False)          # "pdf" | "docx" | ...
+    is_active    = Column(Boolean, default=True)           # ẩn/hiện với bot
+    uploaded_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at   = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    uploader = relationship("User")

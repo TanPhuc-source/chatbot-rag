@@ -245,17 +245,40 @@ export default function MessageBubble({ message }: Props) {
               remarkPlugins={[remarkMath]}
               rehypePlugins={[rehypeKatex]}
               components={{
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "var(--brand)", textDecoration: "underline", cursor: "pointer" }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {children}
-                  </a>
-                ),
+                a: ({ href, children }) => {
+                  // Link /forms/{id}/download → chữ xanh có underline, không hiện URL
+                  const isFormDownload = href && /\/forms\/\d+\/download/.test(href);
+                  if (isFormDownload) {
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          color: "var(--brand)",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {children}
+                      </a>
+                    );
+                  }
+                  // Link thường
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--brand)", textDecoration: "underline", cursor: "pointer" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
                 p: ({ children }) => {
                   // Auto-convert bare URLs in text to clickable links
                   const processNode = (node: any): any => {
