@@ -113,7 +113,7 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
                 </button>
 
                 {/* Logo */}
-                <div className="flex flex-col items-center px-6 pt-8 pb-6">
+                <div className="flex flex-col items-center px-2 pt-8 pb-6">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md border border-slate-100 dark:border-[#2a2a2a] mb-3">
                         <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" className="w-full h-full object-cover" />
                     </div>
@@ -133,13 +133,13 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
 
                     {/* Chờ permissions load xong rồi mới render — tránh nhảy thứ tự */}
                     {permissionsReady && <>
-                        {isAdmin          && <SidebarItem icon={LayoutDashboard}    label="Thống kê & Báo cáo"          path="/admin/analytics" />}
-                        {can('analytics') && <SidebarItem icon={BarChart3}          label="Quản lý Chatbot"       path="/admin" />}
-                        {can('accounts')  && <SidebarItem icon={ShieldCheck}        label="Quản lý tài khoản"        path="/admin/accounts" />}
-                        {can('records')   && <SidebarItem icon={FolderOpen}         label="Quản lý hồ sơ tài liệu"  path="/admin/records" />}
-                        {can('faq')       && <SidebarItem icon={HelpCircle}         label="Quản lý FAQ"              path="/admin/faq" />}
-                        {can('feedback')  && <SidebarItem icon={ThumbsUp}           label="Phản hồi người dùng"     path="/admin/feedback" />}
-                        {can('bot_settings') && <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot"      path="/admin/bot-settings" />}
+                        {isAdmin && <SidebarItem icon={LayoutDashboard} label="Thống kê & Báo cáo" path="/admin/analytics" />}
+                        {can('analytics') && <SidebarItem icon={BarChart3} label="Quản lý Chatbot" path="/admin" />}
+                        {can('accounts') && <SidebarItem icon={ShieldCheck} label="Quản lý tài khoản" path="/admin/accounts" />}
+                        {can('records') && <SidebarItem icon={FolderOpen} label="Quản lý hồ sơ tài liệu" path="/admin/records" />}
+                        {can('faq') && <SidebarItem icon={HelpCircle} label="Quản lý FAQ" path="/admin/faq" />}
+                        {can('feedback') && <SidebarItem icon={ThumbsUp} label="Phản hồi người dùng" path="/admin/feedback" />}
+                        {can('bot_settings') && <SidebarItem icon={SlidersHorizontal} label="Cấu hình Chatbot" path="/admin/bot-settings" />}
                     </>}
 
                     {/* Hệ thống — chỉ admin */}
@@ -147,7 +147,7 @@ export default function SidebarPage({ isMobileOpen, setIsMobileOpen }: SidebarPr
                         <>
                             <p className="px-4 text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2 mt-6 tracking-widest font-sans">Hệ thống</p>
                             <SidebarItem icon={KeyRound} label="Phân quyền nhân viên" path="/admin/permissions" />
-                            <SidebarItem icon={Settings} label="Cài đặt chung"        path="/admin/settings" />
+                            <SidebarItem icon={Settings} label="Cài đặt chung" path="/admin/settings" />
                         </>
                     )}
                 </div>
