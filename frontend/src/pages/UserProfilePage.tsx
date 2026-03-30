@@ -291,6 +291,17 @@ export default function UserProfilePage() {
                                         />
                                     </div>
 
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Email liên hệ</label>
+                                        <textarea name="email" value={profile?.email || ''} onChange={handleChange} rows={1} placeholder="Nhập email liên hệ..."
+                                            style={{ width: "100%", padding: "12px 16px", background: "var(--bg-base)", border: "1px solid var(--border-mid)", borderRadius: 12, color: "var(--text-primary)", fontSize: 14, outline: "none", resize: "none", transition: "all 0.2s" }}
+                                            onFocus={e => { e.target.style.borderColor = "var(--brand)"; e.target.style.boxShadow = "0 0 0 3px rgba(26,95,180,0.1)"; }}
+                                            onBlur={e => { e.target.style.borderColor = "var(--border-mid)"; e.target.style.boxShadow = "none"; }}
+                                        />
+                                    </div>
+
+
                                     <div className="sm:col-span-2">
                                         <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Địa chỉ</label>
                                         <textarea name="address" value={profile?.address || ''} onChange={handleChange} rows={1} placeholder="Phường, Xã..."
