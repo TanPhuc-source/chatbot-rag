@@ -22,7 +22,7 @@ from sqlalchemy import func
 
 from app.db.database import get_db
 from app.db import models
-from app.core.db_dependencies import get_admin_user
+from app.core.db_dependencies import get_admin_user, get_staff_user
 
 router = APIRouter()
 
@@ -56,7 +56,7 @@ class FeedbackStat(BaseModel):
 
 @router.get("/summary", response_model=SummaryOut)
 def get_summary(
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -103,7 +103,7 @@ def get_summary(
 def get_popular_questions(
     limit: int = 20,
     days: int = 30,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -132,7 +132,7 @@ def get_popular_questions(
 @router.get("/hourly", response_model=list[HourlyStats])
 def get_hourly_distribution(
     days: int = 7,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     # Dùng now() local thay vì utcnow() để tránh lệch timezone UTC+7
@@ -164,7 +164,7 @@ def get_hourly_distribution(
 @router.get("/feedback-trend", response_model=list[FeedbackStat])
 def get_feedback_trend(
     days: int = 14,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -209,7 +209,7 @@ class NoFeedbackItem(BaseModel):
 def get_no_feedback_messages(
     limit: int = 100,
     days: int = 30,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -270,7 +270,7 @@ def get_no_feedback_messages(
 @router.get("/export")
 def export_chat_history(
     days: Optional[int] = None,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Export toàn bộ lịch sử chat ra CSV."""

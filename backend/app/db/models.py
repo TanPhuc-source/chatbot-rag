@@ -1,8 +1,8 @@
 """
 SQLAlchemy models — User, Document, ChatSession, ChatMessage,
-                    MessageFeedback, BotSettings, FAQ
+                    MessageFeedback, BotSettings, FAQ, UserPermission
 """
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -28,6 +28,7 @@ class User(Base):
 
     documents = relationship("Document", back_populates="owner")
     chat_sessions = relationship("ChatSession", back_populates="owner")
+    permissions = relationship("UserPermission", back_populates="user", cascade="all, delete-orphan")
 
 
 class Document(Base):
@@ -74,8 +75,8 @@ class MessageFeedback(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     message_id = Column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), unique=True)
-    rating = Column(String, nullable=False)   # "up" | "down"
-    comment = Column(Text, nullable=True)     # ghi chú thêm (tùy chọn)
+    rating = Column(String, nullable=False)
+    comment = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     message = relationship("ChatMessage", back_populates="feedback")
@@ -108,10 +109,71 @@ class FAQ(Base):
     id = Column(Integer, primary_key=True, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
-    category = Column(String, nullable=True)   # VD: "Học phí", "Lịch học", ...
+    category = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     creator = relationship("User")
+
+
+# ── Permission System ──────────────────────────────────────────────────────
+
+# Danh sách tất cả feature có thể phân quyền
+ALL_FEATURES = [
+    "records",       # Quản lý hồ sơ tài liệu
+    "faq",           # Quản lý FAQ
+    "feedback",      # Phản hồi người dùng
+    "analytics",     # Thống kê & Báo cáo
+    "bot_settings",  # Cấu hình Chatbot
+    "accounts",      # Quản lý tài khoản
+]
+
+# Quyền mặc định của từng role (fallback khi không có override per-user)
+ROLE_DEFAULT_PERMISSIONS: dict[str, set[str]] = {
+    "admin":  set(ALL_FEATURES),
+    "staff":  {"records", "faq", "feedback"},
+    "user":   set(),
+}
+
+
+class UserPermission(Base):
+    """
+    Override quyền per-user cho từng feature.
+
+    Logic ưu tiên khi kiểm tra quyền:
+      1. Nếu có row trong bảng này → dùng is_allowed của row đó
+      2. Nếu không có row → fallback về ROLE_DEFAULT_PERMISSIONS[user.role]
+    """
+    __tablename__ = "user_permissions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "feature_key", name="uq_user_feature"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    feature_key = Column(String(64), nullable=False)
+    is_allowed = Column(Boolean, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="permissions")
+
+# ── Thêm vào cuối file app/db/models.py ───────────────────────────────────
+
+class FormTemplate(Base):
+    """Biểu mẫu / đơn từ — admin upload, bot có thể trả link cho người dùng."""
+    __tablename__ = "form_templates"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    display_name = Column(String, nullable=False)          # "Đơn xin đổi lịch học"
+    description  = Column(Text, nullable=True)             # mô tả ngắn (tuỳ chọn)
+    filename     = Column(String, nullable=False)          # tên file thực trên disk
+    file_path    = Column(String, nullable=False)          # "static/forms/..."
+    file_type    = Column(String, nullable=False)          # "pdf" | "docx" | ...
+    is_active    = Column(Boolean, default=True)           # ẩn/hiện với bot
+    uploaded_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at   = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    uploader = relationship("User")

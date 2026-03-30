@@ -7,7 +7,7 @@ import {
     Shield, CheckCircle, UserX, X,
     Mail, Eye, Calendar,
     ChevronLeft, ChevronRight,
-    Menu, MapPin, Phone, User, RefreshCw
+    Menu, MapPin, Phone, User, RefreshCw, UserCheck
 } from 'lucide-react';
 
 interface UserData {
@@ -69,11 +69,17 @@ function StatusBadge({ isActive }: { isActive?: boolean }) {
 }
 
 function RoleBadge({ role }: { role?: string }) {
-    return role === 'admin' ? (
+    if (role === 'admin') return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold border border-blue-100 dark:border-blue-800/50">
             <Shield size={11} /> Admin
         </span>
-    ) : (
+    );
+    if (role === 'staff') return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-semibold border border-amber-100 dark:border-amber-800/50">
+            <UserCheck size={11} /> Nhân viên
+        </span>
+    );
+    return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-600">
             <User size={11} /> User
         </span>
@@ -120,7 +126,7 @@ export default function AccountManagementPage() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user'>('all');
+    const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'staff' | 'user'>('all');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'locked'>('all');
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -290,6 +296,7 @@ export default function AccountManagementPage() {
                                 className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer">
                                 <option value="all">Tất cả vai trò</option>
                                 <option value="admin">Admin</option>
+                                <option value="staff">Nhân viên</option>
                                 <option value="user">User</option>
                             </select>
                             <select
@@ -576,6 +583,7 @@ export default function AccountManagementPage() {
                                             <FormField label="Vai trò" required>
                                                 <select name="role" defaultValue={editingUser?.role || 'user'} className={inputCls}>
                                                     <option value="admin">Admin – Quản trị viên</option>
+                                                    <option value="staff">Nhân viên – Quản lý nội dung</option>
                                                     <option value="user">User – Người dùng</option>
                                                 </select>
                                             </FormField>

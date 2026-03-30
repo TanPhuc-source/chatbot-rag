@@ -241,7 +241,66 @@ export default function MessageBubble({ message }: Props) {
           }}
         >
           <div className="prose-chat" style={{ color: "var(--text-primary)" }}>
-            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={{
+                a: ({ href, children }) => {
+                  // Link /forms/{id}/download → chữ xanh có underline, không hiện URL
+                  const isFormDownload = href && /\/forms\/\d+\/download/.test(href);
+                  if (isFormDownload) {
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          color: "var(--brand)",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {children}
+                      </a>
+                    );
+                  }
+                  // Link thường
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "var(--brand)", textDecoration: "underline", cursor: "pointer" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {children}
+                    </a>
+                  );
+                },
+                p: ({ children }) => {
+                  // Auto-convert bare URLs in text to clickable links
+                  const processNode = (node: any): any => {
+                    if (typeof node !== "string") return node;
+                    const urlRegex = /(https?:\/\/[^\s)]+)/g;
+                    const parts = node.split(urlRegex);
+                    if (parts.length === 1) return node;
+                    return parts.map((part, i) =>
+                      urlRegex.test(part)
+                        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+                            style={{ color: "var(--brand)", textDecoration: "underline", cursor: "pointer" }}
+                            onClick={(e) => e.stopPropagation()}>{part}</a>
+                        : part
+                    );
+                  };
+                  const processed = Array.isArray(children)
+                    ? children.map(processNode)
+                    : processNode(children);
+                  return <p>{processed}</p>;
+                },
+              }}
+            >
               {message.content}
             </ReactMarkdown>
             {message.isStreaming && (
@@ -269,10 +328,7 @@ export default function MessageBubble({ message }: Props) {
             paddingLeft: 4,
           }}
         >
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {!message.isStreaming &&
-              message.sources?.map((src, i) => <SourceCard key={i} source={src} />)}
-          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}></div>
           {!message.isStreaming && (
             <div style={{ display: "flex", gap: 6 }}>
               {message.dbId && <FeedbackButtons messageId={message.dbId} />}

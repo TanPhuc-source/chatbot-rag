@@ -12,7 +12,10 @@ from app.core.exceptions import register_exception_handlers
 from app.db.database import Base, engine
 from app.rag.embeddings import get_embedding_provider
 from app.rag.llm_provider import get_llm_provider
+from app.rag.reranker import _get_ranker
 from app.utils.logger import logger
+from app.api import permissions
+from app.api import forms
 
 
 @asynccontextmanager
@@ -22,6 +25,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting RAG Edu backend...")
     get_embedding_provider()
     get_llm_provider()
+    _get_ranker()   # warm up reranker ngay lúc khởi động, tránh delay 5s ở request đầu tiên
     logger.info("✅ Models loaded. Ready to serve.")
     yield
     logger.info("👋 Shutting down.")
@@ -36,6 +40,9 @@ app = FastAPI(
 
 os.makedirs("uploads/avatars", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+os.makedirs("static/forms", exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +67,9 @@ app.include_router(bot_settings.router, prefix="/settings", tags=["Settings"])
 app.include_router(faq.router,          prefix="/faq",      tags=["FAQ"])
 app.include_router(analytics.router,    prefix="/analytics",tags=["Analytics"])
 app.include_router(ui_settings.router,  prefix="/ui-settings", tags=["UI Settings"])
+app.include_router(permissions.router, prefix="/permissions", tags=["Permissions"])
+app.include_router(forms.router, prefix="/forms", tags=["Forms"])
+ 
 
 register_exception_handlers(app)
 

@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.db_dependencies import get_admin_user
+from app.core.db_dependencies import get_admin_user, get_staff_user
 from app.db.database import get_db
 from app.db import models
 from app.ingestion.indexer import collection_stats, delete_document, _get_collection
@@ -79,7 +79,7 @@ async def _upsert_chunk(chunk_id: str, text: str, metadata: dict) -> None:
 @router.get("/{document_id}/download")
 async def download_original_file(
     document_id: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Tải về file gốc đã upload."""
@@ -105,7 +105,7 @@ async def download_original_file(
 @router.post("", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(..., description="File PDF, DOCX, TXT, PPTX... tối đa 50MB"),
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Upload 1 tài liệu → tự động extract, chunk và index vào ChromaDB."""
@@ -124,7 +124,7 @@ async def upload_file(
 @router.post("/batch", response_model=BatchUploadResponse)
 async def upload_batch(
     files: list[UploadFile] = File(..., description="Upload nhiều file cùng lúc"),
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Upload nhiều tài liệu cùng lúc (tối đa 10 file)."""
@@ -152,7 +152,7 @@ async def upload_batch(
 @router.delete("/{document_id}")
 async def delete_file(
     document_id: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
     db: Session = Depends(get_db),
 ):
     """Xoá tài liệu khỏi ChromaDB + file gốc trên disk."""
@@ -169,7 +169,7 @@ async def delete_file(
 
 
 @router.get("/stats")
-async def get_stats(current_user: models.User = Depends(get_admin_user)):
+async def get_stats(current_user: models.User = Depends(get_staff_user)):
     """Thống kê tổng số chunks trong ChromaDB."""
     return await collection_stats()
 
@@ -177,7 +177,7 @@ async def get_stats(current_user: models.User = Depends(get_admin_user)):
 @router.get("/{document_id}/content")
 async def get_document_content(
     document_id: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
 ):
     """Lấy toàn bộ chunks của 1 tài liệu từ ChromaDB, kèm chunk_id."""
     collection = _get_collection()
@@ -215,7 +215,7 @@ async def update_chunk(
     document_id: str,
     chunk_id: str,
     body: UpdateChunkRequest,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
 ):
     """Sửa nội dung text của 1 chunk, re-embed và lưu lại ChromaDB."""
     if not body.text.strip():
@@ -239,7 +239,7 @@ async def update_chunk(
 async def delete_chunk(
     document_id: str,
     chunk_id: str,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
 ):
     """Xóa 1 chunk khỏi ChromaDB."""
     collection = _get_collection()
@@ -260,7 +260,7 @@ async def delete_chunk(
 async def split_chunk(
     document_id: str,
     body: SplitChunkRequest,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
 ):
     """Tách 1 chunk thành 2 tại vị trí ký tự split_at."""
     collection = _get_collection()
@@ -301,7 +301,7 @@ async def split_chunk(
 async def merge_chunks(
     document_id: str,
     body: MergeChunksRequest,
-    current_user: models.User = Depends(get_admin_user),
+    current_user: models.User = Depends(get_staff_user),
 ):
     """Gộp 2 chunk thành 1. Chunk có index nhỏ hơn được giữ lại, chunk kia bị xóa."""
     if body.chunk_id_a == body.chunk_id_b:

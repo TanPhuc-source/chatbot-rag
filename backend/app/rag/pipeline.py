@@ -36,6 +36,9 @@ from app.utils.logger import logger
 # Ngưỡng score tối thiểu — chunk dưới ngưỡng này bị bỏ qua
 RELEVANCE_THRESHOLD = 0.15
 
+# Ngưỡng FAQ direct — similarity >= mức này thì trả lời thẳng từ FAQ, bỏ qua retrieve+rerank+LLM
+FAQ_DIRECT_THRESHOLD = 0.92
+
 # ── Chitchat patterns ──────────────────────────────────────────────────────────
 # Các pattern hội thoại thông thường không cần tra tài liệu
 _CHITCHAT_PATTERNS = [
@@ -74,6 +77,83 @@ def _is_chitchat(query: str) -> bool:
         if word_count <= 8:
             return True
     return False
+
+
+# ── Ambiguous query detection ──────────────────────────────────────────────────
+# Các câu hỏi mơ hồ, phụ thuộc context hội thoại, cần rewrite trước khi search
+_AMBIGUOUS_PATTERNS = [
+    r"^còn\s",
+    r"^vậy\s",
+    r"^thế\s",
+    r"^thì sao",
+    r"còn\s.+thì sao",
+    r"^nếu vậy",
+    r"còn.+thì",
+]
+_AMBIGUOUS_RE = re.compile("|".join(_AMBIGUOUS_PATTERNS), re.IGNORECASE | re.UNICODE)
+
+
+def _is_ambiguous_query(query: str) -> bool:
+    """Trả về True nếu câu hỏi mơ hồ, cần history để hiểu đúng."""
+    q = query.strip()
+    return len(q.split()) <= 10 and bool(_AMBIGUOUS_RE.search(q))
+
+
+async def _rewrite_query_with_context(
+    question: str,
+    history: list[dict],
+) -> str:
+    """
+    Rewrite câu hỏi mơ hồ thành câu hỏi độc lập rõ ràng dựa vào history.
+    Ví dụ:
+      history: [user: "thủ tục VSTEP?", assistant: "..."]
+      question: "còn thi tin học thì sao"
+      → "Thủ tục đăng ký thi tin học UDCNTT là gì?"
+    """
+    if not history:
+        return question
+
+    recent = history[-4:]
+    history_text = "\n".join(
+        f"{'Người dùng' if m['role'] == 'user' else 'Trợ lý'}: {m['content'][:300]}"
+        for m in recent
+    )
+
+    rewrite_system = (
+        "Bạn là chuyên gia xử lý ngôn ngữ tự nhiên.\n"
+        "Nhiệm vụ: Viết lại câu hỏi cuối thành câu hỏi ĐỘC LẬP, RÕ RÀNG để tìm kiếm tài liệu.\n\n"
+        "QUY TẮC QUAN TRỌNG:\n"
+        "1. Nếu câu hỏi dùng 'còn', 'vậy còn', 'thế còn' để HỎI VỀ CHỦ ĐỀ MỚI → "
+        "viết lại tập trung vào CHỦ ĐỀ MỚI đó, KHÔNG gắn với chủ đề cũ.\n"
+        "   Ví dụ: [Hỏi về VSTEP] → 'còn thi tin học thì sao' "
+        "→ 'Thủ tục đăng ký thi tin học (UDCNTT) là gì?' (KHÔNG phải 'VSTEP có thi tin học không')\n"
+        "2. Nếu câu hỏi hỏi THÊM về cùng chủ đề cũ → giữ nguyên chủ đề cũ.\n"
+        "   Ví dụ: [Hỏi về VSTEP] → 'lệ phí là bao nhiêu' → 'Lệ phí thi VSTEP là bao nhiêu?'\n"
+        "3. Chỉ trả về câu hỏi đã viết lại, không giải thích, không thêm bất cứ thứ gì khác."
+    )
+    prompt = (
+        f"Lịch sử hội thoại:\n{history_text}\n\n"
+        f"Câu hỏi cần viết lại: {question}\n\n"
+        f"Câu hỏi độc lập (chỉ trả về câu hỏi, không giải thích):"
+    )
+
+    try:
+        llm = get_llm_provider()
+        rewritten = await llm.chat(
+            [
+                {"role": "system", "content": rewrite_system},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.1,
+            max_tokens=150,
+        )
+        rewritten = rewritten.strip()
+        if rewritten:
+            logger.info(f"Query rewritten: '{question}' → '{rewritten}'")
+            return rewritten
+    except Exception as e:
+        logger.warning(f"Query rewrite failed: {e}")
+    return question
 
 
 async def _chitchat_response(
@@ -263,8 +343,19 @@ async def answer(
         answer_text = await _chitchat_response(question, history)
         return RAGResponse(answer=answer_text, sources=[], chunks_used=0)
 
-    # 1. Retrieve + rerank
-    chunks = await _retrieve_and_rerank(question, collection_name)
+    # 0.5. FAQ direct match — bypass toàn bộ pipeline nếu similarity rất cao
+    faq_direct = find_matching_faq(question)
+    if faq_direct and faq_direct.similarity >= FAQ_DIRECT_THRESHOLD:
+        logger.info(f"FAQ direct hit (similarity={faq_direct.similarity:.3f}): '{faq_direct.question[:60]}'")
+        return RAGResponse(answer=faq_direct.answer, sources=[], chunks_used=0)
+
+    # 0.6. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
+    retrieval_query = question
+    if history and _is_ambiguous_query(question):
+        retrieval_query = await _rewrite_query_with_context(question, history)
+
+    # 1. Retrieve + rerank (dùng câu đã rewrite để search)
+    chunks = await _retrieve_and_rerank(retrieval_query, collection_name)
 
     if not chunks:
         return RAGResponse(
@@ -320,8 +411,23 @@ async def stream_answer(
         yield RAGResponse(answer=full_answer, sources=[], chunks_used=0)
         return
 
-    # 1. Retrieve + rerank (không stream phần này)
-    chunks = await _retrieve_and_rerank(question, collection_name)
+    # 0.5. FAQ direct match — bypass toàn bộ pipeline nếu similarity rất cao
+    faq_direct = find_matching_faq(question)
+    if faq_direct and faq_direct.similarity >= FAQ_DIRECT_THRESHOLD:
+        logger.info(f"FAQ direct hit (similarity={faq_direct.similarity:.3f}): '{faq_direct.question[:60]}'")
+        words = faq_direct.answer.split(" ")
+        for i, word in enumerate(words):
+            yield word if i == 0 else " " + word
+        yield RAGResponse(answer=faq_direct.answer, sources=[], chunks_used=0)
+        return
+
+    # 0.6. Query rewrite — làm rõ câu hỏi mơ hồ dựa vào history
+    retrieval_query = question
+    if history and _is_ambiguous_query(question):
+        retrieval_query = await _rewrite_query_with_context(question, history)
+
+    # 1. Retrieve + rerank (dùng câu đã rewrite để search, không stream phần này)
+    chunks = await _retrieve_and_rerank(retrieval_query, collection_name)
 
     if not chunks:
         yield build_out_of_scope_response()

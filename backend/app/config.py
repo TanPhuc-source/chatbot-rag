@@ -6,7 +6,7 @@ from typing import Literal
 
 class Settings(BaseSettings):
     # ── LLM Provider ──────────────────────────────────────────
-    LLM_PROVIDER: Literal["groq", "ollama"] = "groq"
+    LLM_PROVIDER: Literal["groq", "ollama", "openai", "gemini"] = "groq"
 
     # Groq
     GROQ_API_KEY: str = ""
@@ -14,7 +14,15 @@ class Settings(BaseSettings):
 
     # Ollama (local)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "qwen2.5:7b "
+    OLLAMA_MODEL: str = "qwen2.5:7b"
+
+    # OpenAI
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"          # hoặc gpt-4o, o1-mini, ...
+
+    # Gemini
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"     # hoặc gemini-1.5-pro, ...
 
     # ── Embedding Provider ────────────────────────────────────
     EMBEDDING_PROVIDER: Literal["local"] = "local"
@@ -40,30 +48,25 @@ class Settings(BaseSettings):
     # ── RAG tuning ────────────────────────────────────────────
     CHUNK_MAX_CHARS: int = 1000
     CHUNK_MAX_OVERLAP: int = 200
-    RETRIEVER_TOP_K: int = 10        # lấy nhiều trước khi rerank
-    RERANKER_TOP_N: int = 4          # sau rerank còn lại bao nhiêu
+    RETRIEVER_TOP_K: int = 5
+    RERANKER_TOP_N: int = 3
 
     # ── RAG Advanced Features ─────────────────────────────────
-    # HyDE: embed hypothetical answer thay vì embed query trực tiếp
     ENABLE_HYDE: bool = True
-
-    # Query Transformations: sinh nhiều biến thể query, search song song
     ENABLE_QUERY_TRANSFORM: bool = True
-    QUERY_TRANSFORM_N: int = 3       # số biến thể sinh ra
-
-    # Contextual Chunk Headers: thêm header ngữ cảnh khi index tài liệu
+    QUERY_TRANSFORM_N: int = 3
     ENABLE_CONTEXTUAL_HEADERS: bool = True
 
-    # ── File Storage ──────────────────────────────────────────────────────────
-    UPLOAD_DIR: str = "uploads/documents"    # thư mục lưu file gốc
+    # ── File Storage ──────────────────────────────────────────
+    UPLOAD_DIR: str = "uploads/documents"
 
-    # ── Image OCR & Table Extraction ──────────────────────────────────────────
-    ENABLE_IMAGE_OCR: bool = True            # Bật OCR cho file ảnh
-    ENABLE_TABLE_EXTRACTION: bool = True     # Bật extract bảng từ ảnh
-    OCR_USE_AI_FALLBACK: bool = True         # Dùng AI Vision khi OCR line detection thất bại
+    # ── Image OCR & Table Extraction ──────────────────────────
+    ENABLE_IMAGE_OCR: bool = True
+    ENABLE_TABLE_EXTRACTION: bool = True
+    OCR_USE_AI_FALLBACK: bool = True
     GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
-    ANTHROPIC_API_KEY: str = ""              # Để trống nếu không dùng Anthropic fallback
-    CONTEXTUAL_HEADERS_MAX_CHUNKS: int = 200  # giới hạn chunk được enrich/file
+    ANTHROPIC_API_KEY: str = ""
+    CONTEXTUAL_HEADERS_MAX_CHUNKS: int = 200
 
     class Config:
         env_file = ".env"

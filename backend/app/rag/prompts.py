@@ -15,8 +15,8 @@ Nguyên tắc:
 - Chỉ trả lời dựa trên nội dung trong tài liệu. Không bịa đặt.
 - Nếu tài liệu không đủ thông tin, hãy nói rõ điều đó.
 - Trả lời bằng ngôn ngữ của câu hỏi (tiếng Việt hoặc tiếng Anh).
-- Trích dẫn rõ nguồn (tên file, số trang nếu có) sau mỗi thông tin quan trọng.
-- Trình bày rõ ràng, dùng gạch đầu dòng hoặc đánh số khi liệt kê."""
+- KHÔNG trích dẫn tên file, số trang hay nguồn tài liệu trong câu trả lời.
+- Trình bày rõ ràng, tự nhiên, dùng gạch đầu dòng hoặc đánh số khi liệt kê."""
 
 # Cache nhẹ trong memory — refresh mỗi 60s
 import time
@@ -67,11 +67,78 @@ def invalidate_settings_cache():
     _settings_cache["ts"] = 0.0
 
 
+# ── Forms cache ────────────────────────────────────────────────────────────
+
+_forms_cache: dict = {"text": None, "ts": 0.0}
+
+
+def invalidate_forms_cache():
+    """Gọi sau khi admin thêm/xóa/ẩn form để bot cập nhật ngay."""
+    _forms_cache["ts"] = 0.0
+
+
+def _get_active_forms_text() -> str:
+    """Lấy danh sách biểu mẫu đang active từ DB, cache 60 giây."""
+    now = time.time()
+    if _forms_cache["text"] is not None and now - _forms_cache["ts"] < _CACHE_TTL:
+        return _forms_cache["text"]
+    try:
+        from app.db.database import SessionLocal
+        from app.db import models as _models
+        db = SessionLocal()
+        try:
+            forms = (
+                db.query(_models.FormTemplate)
+                .filter(_models.FormTemplate.is_active == True)
+                .order_by(_models.FormTemplate.id)
+                .all()
+            )
+            if not forms:
+                _forms_cache["text"] = ""
+            else:
+                lines = [
+                    "DANH SÁCH BIỂU MẪU / ĐƠN TỪ có thể cung cấp cho người dùng "
+                    "(CHỈ dùng link này, KHÔNG tạo link từ tài liệu RAG):"
+                ]
+                for f in forms:
+                    desc = f" — {f.description}" if f.description else ""
+                    lines.append(
+                        f"- [{f.display_name}](http://localhost:8000/forms/{f.id}/download){desc}"
+                    )
+                _forms_cache["text"] = "\n".join(lines)
+        finally:
+            db.close()
+    except Exception:
+        _forms_cache["text"] = ""
+    _forms_cache["ts"] = time.time()
+    return _forms_cache["text"]
+
+
+import re as _re
+
+# Pattern loại bỏ các dòng trích nguồn có sẵn trong nội dung chunk
+_CITATION_RE = _re.compile(
+    r"\[(?:Nguồn|nguồn|Source|source)\s*\d*\s*:?[^\]]*\]"   # [Nguồn 1: file.docx, trang 2]
+    r"|(?:Nguồn|nguồn|Source|source)\s*\d*\s*:.*$"           # Nguồn: file.docx, trang 2
+    r"|\((?:Nguồn|nguồn|Source|source)[^)]*\)",               # (Nguồn: file.docx)
+    _re.MULTILINE,
+)
+
+
+def _clean_chunk(text: str) -> str:
+    """Xóa các trích dẫn nguồn có sẵn trong nội dung chunk trước khi đưa vào prompt."""
+    cleaned = _CITATION_RE.sub("", text)
+    # Xóa dòng trống thừa sau khi remove
+    cleaned = _re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 def _format_context(chunks: list[RetrievedChunk]) -> str:
     parts: list[str] = []
     for i, chunk in enumerate(chunks, 1):
         page_info = f", trang {chunk.first_page}" if chunk.first_page else ""
-        parts.append(f"[Nguồn {i}: {chunk.source_file}{page_info}]\n{chunk.content}")
+        clean_content = _clean_chunk(chunk.content)
+        parts.append(f"[Nguồn {i}: {chunk.source_file}{page_info}]\n{clean_content}")
     return "\n\n---\n\n".join(parts)
 
 
@@ -86,12 +153,26 @@ def build_qa_prompt(
     """
     Prompt hỏi đáp tổng quát.
     Nếu có faq_answer, đưa vào context ưu tiên đầu tiên.
+    Tự động inject danh sách biểu mẫu active vào system prompt.
     """
     context = _format_context(chunks)
     system = get_system_prompt()
 
+    # Inject danh sách biểu mẫu — bot biết link nào được phép trả
+    forms_text = _get_active_forms_text()
+    if forms_text:
+        system = (
+            system
+            + "\n\n"
+            + forms_text
+            + "\n\nQuy tắc về biểu mẫu: Khi người dùng hỏi về đơn từ, biểu mẫu hoặc "
+              "thủ tục cần nộp giấy tờ, hãy dùng đúng định dạng markdown link từ danh sách trên. "
+              "Ví dụ: [Đơn xin đổi lịch học](http://...) — KHÔNG viết link URL ra ngoài. "
+              "KHÔNG bao giờ tự tạo ra link tải file từ tài liệu RAG."
+        )
+
     if faq_answer:
-        context = f"[FAQ - Câu trả lời ưu tiên]\n{faq_answer}\n\n---\n\n{context}"
+        context = f"{faq_answer}\n\n---\n\n{context}"
 
     messages = [{"role": "system", "content": system}]
     if history:
