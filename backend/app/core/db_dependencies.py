@@ -2,12 +2,11 @@
 DB Dependencies — get_current_db_user, get_admin_user, get_staff_user,
                   has_feature_permission, require_feature
 
-Thêm mới: has_feature_permission() và require_feature() cho permission system.
+Đọc token từ HttpOnly Cookie (thống nhất với auth.py).
 """
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, Request, status
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
@@ -16,19 +15,23 @@ from app.db.database import get_db
 from app.db import models
 from app.db.models import ROLE_DEFAULT_PERMISSIONS, UserPermission
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
 
 def get_current_db_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
     db: Session = Depends(get_db),
 ) -> models.User:
-    settings = get_settings()
+    """Đọc token từ HttpOnly cookie 'access_token' — thống nhất với auth.py."""
+    token = request.cookies.get("access_token")
+
     exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Token không hợp lệ hoặc đã hết hạn",
-        headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if not token:
+        raise exc
+
+    settings = get_settings()
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         username: str = payload.get("sub")
@@ -38,7 +41,7 @@ def get_current_db_user(
         raise exc
 
     user = db.query(models.User).filter(models.User.username == username).first()
-    if not user:
+    if not user or not user.is_active:
         raise exc
     return user
 
@@ -57,7 +60,7 @@ def get_admin_user(
 def get_staff_user(
     current_user: models.User = Depends(get_current_db_user),
 ) -> models.User:
-    """Cho phép cả admin lẫn staff — dùng cho các endpoint nhân viên được phép truy cập."""
+    """Cho phép cả admin lẫn staff."""
     if current_user.role not in ("admin", "staff"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -69,14 +72,6 @@ def get_staff_user(
 # ── Permission helpers ─────────────────────────────────────────────────────
 
 def has_feature_permission(user: models.User, feature_key: str, db: Session) -> bool:
-    """
-    Kiểm tra user có quyền truy cập feature_key không.
-
-    Thứ tự ưu tiên:
-      1. Admin luôn có tất cả quyền (bypass mọi override)
-      2. Nếu có UserPermission override → dùng is_allowed từ đó
-      3. Fallback về ROLE_DEFAULT_PERMISSIONS[role]
-    """
     if user.role == "admin":
         return True
 
@@ -95,16 +90,6 @@ def has_feature_permission(user: models.User, feature_key: str, db: Session) -> 
 
 
 def require_feature(feature_key: str):
-    """
-    Factory trả về Dependency kiểm tra quyền feature.
-
-    Dùng trong router:
-        @router.get("/records")
-        def get_records(
-            current_user = Depends(require_feature("records")),
-            db = Depends(get_db),
-        ):
-    """
     def _check(
         current_user: models.User = Depends(get_current_db_user),
         db: Session = Depends(get_db),
@@ -120,11 +105,6 @@ def require_feature(feature_key: str):
 
 
 def get_user_effective_permissions(user: models.User, db: Session) -> dict[str, bool]:
-    """
-    Trả về dict {feature_key: bool} với quyền thực tế của user,
-    đã tính cả override và fallback role default.
-    Dùng cho API /permissions/me và trang admin.
-    """
     from app.db.models import ALL_FEATURES
 
     overrides: dict[str, bool] = {

@@ -59,6 +59,12 @@ async def extract_tables_from_image(
     """
     Extract tất cả bảng từ 1 ảnh.
 
+    Pipeline:
+      Layer 1 — OCR + line detection (nhanh, offline)
+        → chỉ dùng kết quả nếu PASS quality check
+      Layer 2 — AI Vision (chính xác hơn, tốn API)
+        → fallback khi Layer 1 thất bại hoặc kết quả kém chất lượng
+
     Returns:
         list[ExtractedTable] — có thể rỗng nếu không tìm thấy bảng
     """
@@ -68,12 +74,20 @@ async def extract_tables_from_image(
     tables = _extract_with_ocr_lines(image_bytes)
 
     if tables:
-        logger.info(f"OCR line method: found {len(tables)} table(s) in {filename}")
-        return tables
+        # Kiểm tra chất lượng trước khi chấp nhận kết quả Layer 1
+        if _ocr_tables_pass_quality_check(tables):
+            logger.info(f"OCR line method: found {len(tables)} table(s) in {filename}")
+            return tables
+        else:
+            logger.info(
+                f"OCR line method found tables but quality check failed "
+                f"(likely colored-background table without clear borders) — "
+                f"falling back to AI vision for {filename}"
+            )
 
     # Layer 2: AI Vision fallback
     if use_ai_fallback:
-        logger.info(f"OCR line method failed, trying AI vision for {filename}")
+        logger.info(f"Trying AI vision for {filename}")
         tables = await _extract_with_ai_vision(image_bytes, filename)
 
     if not tables:
@@ -82,20 +96,198 @@ async def extract_tables_from_image(
     return tables
 
 
+def _ocr_tables_pass_quality_check(tables: list[ExtractedTable]) -> bool:
+    """
+    Kiểm tra chất lượng kết quả Layer 1 (OCR line detection).
+
+    Bảng có chất lượng tốt khi:
+    1. Mỗi ô chỉ chứa 1 giá trị đơn (không phải nhiều giá trị gộp lại)
+    2. Số hàng hợp lý (không quá ít — dấu hiệu merge hàng sai)
+    3. Số cột nhất quán giữa các hàng
+
+    Bảng dạng colored-background (không có border line) thường fail vì:
+    - OpenCV không detect được cell boundary → text bị gộp theo bbox tự do
+    - Các ô header multi-line bị collapse không đúng cách
+    """
+    if not tables:
+        return False
+
+    for table in tables:
+        cells = table.raw_cells
+        if not cells:
+            continue
+
+        max_row = max(c.row for c in cells)
+        max_col = max(c.col for c in cells)
+
+        # Check 1: Phải có ít nhất 2 hàng (header + 1 data row)
+        if max_row < 1:
+            logger.debug("Quality check FAIL: only 1 row detected")
+            return False
+
+        # Check 2: Tỉ lệ ô có nhiều từ (> 5 từ) không quá cao
+        # Ô bình thường: ngày tháng, tên tháng, số thứ tự → ngắn
+        # Ô bị gộp sai: "Tháng 01 Tháng 02 Tháng 03" → nhiều từ
+        long_cells = [c for c in cells if len(c.text.split()) > 5]
+        long_ratio = len(long_cells) / len(cells)
+        if long_ratio > 0.25:  # Hơn 25% ô có text dài bất thường
+            logger.debug(
+                f"Quality check FAIL: {long_ratio:.0%} cells have >5 words "
+                f"(likely merged incorrectly)"
+            )
+            return False
+
+        # Check 3: Số cột mỗi hàng phải tương đối nhất quán
+        rows: dict[int, list] = {}
+        for c in cells:
+            rows.setdefault(c.row, []).append(c)
+        col_counts = [len(v) for v in rows.values()]
+        if col_counts:
+            max_cols = max(col_counts)
+            # Số hàng có < 50% số cột so với hàng đầy đủ nhất
+            sparse_rows = sum(1 for n in col_counts if n < max_cols * 0.5)
+            sparse_ratio = sparse_rows / len(col_counts)
+            if sparse_ratio > 0.5:  # Hơn 50% hàng bị thiếu cột
+                logger.debug(
+                    f"Quality check FAIL: {sparse_ratio:.0%} rows have <50% expected columns"
+                )
+                return False
+
+    return True
+
+
 def tables_to_text(tables: list[ExtractedTable]) -> str:
     """
-    Gộp tất cả bảng thành text phẳng để index vào ChromaDB.
-    Mỗi bảng được bọc trong header để RAG dễ nhận biết.
+    Gộp tất cả bảng thành text có ngữ nghĩa để index vào ChromaDB.
+
+    Xử lý 2 trường hợp:
+    - AI Vision trả về prose trực tiếp (flag __PROSE__): dùng luôn, không parse lại
+    - OCR Layer 1 trả về Markdown: convert từng hàng thành câu văn xuôi
+      dạng "Tên bảng — Cột A: val; Cột B: val."
     """
     if not tables:
         return ""
 
     parts = []
     for t in tables:
-        header = f"[BẢNG {t.table_index + 1}]"
-        parts.append(f"{header}\n{t.markdown}")
+        table_label = f"Bảng {t.table_index + 1}"
+
+        # Trường hợp AI Vision đã trả về prose sẵn
+        if t.markdown.startswith("__PROSE__\n"):
+            prose = t.markdown[len("__PROSE__\n"):]
+            parts.append(prose.strip())
+            continue
+
+        # Trường hợp Markdown table từ OCR Layer 1
+        prose = _markdown_table_to_prose(t.markdown, table_label)
+        if prose:
+            parts.append(prose)
+        else:
+            # Fallback cuối cùng: giữ nguyên markdown
+            parts.append(f"[BẢNG {t.table_index + 1}]\n{t.markdown}")
 
     return "\n\n".join(parts)
+
+
+def _markdown_table_to_prose(markdown: str, table_label: str) -> str:
+    """
+    Parse Markdown table và convert sang văn xuôi có cấu trúc.
+
+    Mỗi hàng dữ liệu → 1 đoạn text:
+        "[table_label] Hàng 1 — Cột A: val; Cột B: val; ..."
+
+    Xử lý được:
+    - Cột merge (ô rỗng → giữ giá trị cột trước hoặc bỏ qua)
+    - Header gồm nhiều dòng (dòng đầu làm tên cột chính)
+    - Ô có dấu | đã được escape (\\|)
+    """
+    import re
+
+    lines = [l.strip() for l in markdown.strip().splitlines() if l.strip()]
+    if not lines:
+        return ""
+
+    # Tách các hàng pipe
+    table_lines = [l for l in lines if l.startswith("|")]
+    if len(table_lines) < 2:
+        return ""
+
+    def parse_row(line: str) -> list[str]:
+        # Bỏ | đầu và cuối, tách theo | (giữ escape \|)
+        inner = line.strip("|")
+        cells = re.split(r"(?<!\\)\|", inner)
+        return [c.replace("\\|", "|").strip() for c in cells]
+
+    # Dòng separator (---) không phải dữ liệu
+    def is_separator(line: str) -> bool:
+        return bool(re.match(r"^\|[\s\|\-:]+\|$", line))
+
+    # Lấy header (dòng đầu tiên không phải separator)
+    header_cells: list[str] = []
+    data_rows: list[list[str]] = []
+
+    found_header = False
+    # Tính số cột kỳ vọng = max số cell trong 1 hàng
+    all_parsed = [parse_row(l) for l in table_lines if not is_separator(l)]
+    if not all_parsed:
+        return ""
+    expected_col_count = max(len(r) for r in all_parsed)
+
+    for line in table_lines:
+        if is_separator(line):
+            continue
+        cells = parse_row(line)
+        while cells and not cells[-1]:
+            cells.pop()
+        if not cells:
+            continue
+        if not found_header:
+            header_cells = cells
+            found_header = True
+        else:
+            # Nếu hàng này có ít cột hơn kỳ vọng VÀ header chưa đủ cột
+            # → có thể là phần còn lại của multi-line header → gộp vào header
+            if len(header_cells) < expected_col_count and len(cells) <= len(header_cells):
+                # Gộp text vào ô header tương ứng theo vị trí
+                for col_idx, cell_text in enumerate(cells):
+                    if col_idx < len(header_cells):
+                        if cell_text and header_cells[col_idx]:
+                            header_cells[col_idx] += " " + cell_text
+                        elif cell_text:
+                            header_cells[col_idx] = cell_text
+                continue
+            data_rows.append(cells)
+
+    if not header_cells or not data_rows:
+        return ""
+
+    # Làm sạch tên cột: bỏ ô rỗng ở header (merged header)
+    # Nếu header có ô rỗng, dùng tên cột trước đó
+    clean_headers: list[str] = []
+    last_header = ""
+    for h in header_cells:
+        if h:
+            last_header = h
+        clean_headers.append(last_header if last_header else f"Cột {len(clean_headers)+1}")
+
+    # Build prose cho từng hàng dữ liệu
+    row_texts: list[str] = []
+    for row_idx, row in enumerate(data_rows):
+        # Bỏ hàng toàn rỗng
+        if not any(c for c in row):
+            continue
+
+        pairs: list[str] = []
+        for col_idx, header in enumerate(clean_headers):
+            val = row[col_idx].strip() if col_idx < len(row) else ""
+            if val and val != "-" and val != "—":
+                pairs.append(f"{header}: {val}")
+
+        if pairs:
+            row_text = f"{table_label} — " + "; ".join(pairs) + "."
+            row_texts.append(row_text)
+
+    return "\n".join(row_texts)
 
 
 # ── Layer 1: OCR + OpenCV line detection ────────────────────────────────────
@@ -242,8 +434,19 @@ def _extract_cells_from_region(region: np.ndarray, offset: tuple[int, int] = (0,
         row_groups.append(current_group)
 
         # Sắp xếp từng hàng theo x
+        # Sau đó merge các hàng liền kề có cùng vị trí x (multi-line header cells)
+        sorted_row_groups: list[list[dict]] = []
+        for group in row_groups:
+            group.sort(key=lambda i: i["cx"])
+            sorted_row_groups.append(group)
+
+        # Gộp các "hàng" mà thực ra là text wrap trong cùng 1 ô header
+        # Nhận biết: 2 hàng liền nhau có số lượng item ít (< avg_cols/2)
+        # và cx của chúng overlap với hàng kề → cùng 1 ô
+        merged_row_groups = _merge_multiline_header_rows(sorted_row_groups)
+
         cells: list[TableCell] = []
-        for row_idx, group in enumerate(row_groups):
+        for row_idx, group in enumerate(merged_row_groups):
             group.sort(key=lambda i: i["cx"])
             for col_idx, item in enumerate(group):
                 cells.append(TableCell(
@@ -258,6 +461,87 @@ def _extract_cells_from_region(region: np.ndarray, offset: tuple[int, int] = (0,
     except Exception as e:
         logger.warning(f"EasyOCR cell extraction error: {e}")
         return []
+
+
+def _merge_multiline_header_rows(row_groups: list[list[dict]]) -> list[list[dict]]:
+    """
+    Gộp các hàng liền kề mà thực ra là text wrap trong cùng 1 ô (multi-line cell).
+
+    Vấn đề: EasyOCR phát hiện "ĐÁNH GIÁ", "NĂNG LỰC", "NGOẠI NGỮ" thành 3 bbox
+    riêng biệt → 3 hàng → header bị vỡ, col mapping sai.
+
+    Giải pháp: Nếu hàng kề nhau có số item bằng nhau VÀ các item có cx gần nhau
+    (overlap theo chiều x) → gộp text của chúng lại vào hàng trước.
+
+    Áp dụng cho toàn bộ bảng (không chỉ header) để handle merged cells.
+    """
+    if not row_groups:
+        return row_groups
+
+    # Đếm số cột kỳ vọng = max số item trong 1 hàng
+    expected_cols = max(len(g) for g in row_groups)
+
+    merged: list[list[dict]] = []
+    i = 0
+    while i < len(row_groups):
+        current = row_groups[i]
+        # Thử gộp với hàng tiếp theo nếu cả 2 đều có số item <= expected_cols
+        # và các cx của chúng match nhau (cùng cột)
+        while i + 1 < len(row_groups):
+            nxt = row_groups[i + 1]
+            # Chỉ gộp nếu cả 2 hàng đều ít hơn expected_cols
+            # (hàng đầy đủ cột = hàng data, không cần gộp)
+            if len(current) > expected_cols * 0.6 and len(nxt) > expected_cols * 0.6:
+                break
+            # Kiểm tra cx overlap: với mỗi item trong nxt, tìm item gần nhất trong current
+            if not _rows_have_matching_cols(current, nxt, expected_cols):
+                break
+            # Gộp: nối text của nxt vào current theo cột gần nhất
+            current = _merge_two_rows(current, nxt)
+            i += 1
+        merged.append(current)
+        i += 1
+
+    return merged
+
+
+def _rows_have_matching_cols(row_a: list[dict], row_b: list[dict], expected_cols: int) -> bool:
+    """Kiểm tra xem 2 hàng có cùng layout cột không (cx gần nhau)."""
+    if not row_a or not row_b:
+        return False
+    # Lấy tập cx của cả 2 hàng
+    xs_a = [item["cx"] for item in row_a]
+    xs_b = [item["cx"] for item in row_b]
+    # Ước tính độ rộng trung bình 1 cột
+    if len(xs_a) < 2 and len(xs_b) < 2:
+        return True
+    all_xs = xs_a + xs_b
+    col_width_estimate = (max(all_xs) - min(all_xs)) / max(expected_cols - 1, 1)
+    tolerance = max(col_width_estimate * 0.5, 30)
+    # Mỗi item trong row_b phải có item match trong row_a (hoặc ngược lại)
+    matches = 0
+    for xb in xs_b:
+        if any(abs(xb - xa) <= tolerance for xa in xs_a):
+            matches += 1
+    return matches >= min(len(xs_b), len(xs_a)) * 0.5
+
+
+def _merge_two_rows(base: list[dict], extra: list[dict]) -> list[dict]:
+    """Nối text của extra vào base theo cột gần nhất."""
+    result = [dict(item) for item in base]  # shallow copy
+    xs_base = [item["cx"] for item in result]
+
+    for ex_item in extra:
+        # Tìm item trong base có cx gần nhất
+        if not xs_base:
+            result.append(dict(ex_item))
+            continue
+        closest_idx = min(range(len(xs_base)), key=lambda i: abs(xs_base[i] - ex_item["cx"]))
+        # Nối text, mở rộng bbox
+        result[closest_idx]["text"] += " " + ex_item["text"]
+        result[closest_idx]["y2"] = max(result[closest_idx]["y2"], ex_item["y2"])
+
+    return result
 
 
 def _cells_to_markdown(cells: list[TableCell]) -> str:
@@ -296,17 +580,23 @@ async def _extract_with_ai_vision(image_bytes: bytes, filename: str) -> list[Ext
     compressed = _compress_for_vision(image_bytes)
     b64 = base64.standard_b64encode(compressed).decode()
 
-    prompt = """Hãy phân tích ảnh này và trích xuất TẤT CẢ các bảng bạn thấy.
+    prompt = """Phân tích ảnh này. Nếu có bảng, hãy trích xuất dữ liệu theo định dạng SAU ĐÂY — không dùng Markdown table.
 
-Với mỗi bảng:
-1. Xác định tiêu đề cột (hàng đầu tiên)
-2. Đọc dữ liệu từng hàng
-3. Trả về dưới dạng Markdown table
+ĐỊNH DẠNG OUTPUT (bắt buộc):
+Với mỗi hàng dữ liệu, viết 1 dòng theo cú pháp:
+[Tên bảng hoặc tiêu đề ảnh] — Tên cột 1: giá trị; Tên cột 2: giá trị; Tên cột 3: giá trị.
 
-Nếu có nhiều bảng, đánh số: [BẢNG 1], [BẢNG 2]...
-Nếu không có bảng nào, trả về: KHÔNG_CÓ_BẢNG
+QUY TẮC XỬ LÝ MERGED CELLS (header gộp ô):
+- Nếu header có ô gộp nhiều dòng (ví dụ: "ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ" trải dài 3 dòng), hãy gộp lại thành 1 tên cột duy nhất: "ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ"
+- Không tách header thành nhiều cột riêng nếu chúng thuộc cùng 1 ô gộp
+- Ô trống trong dữ liệu → bỏ qua cặp "tên cột: giá trị" đó
 
-Chỉ trả về nội dung bảng, không cần giải thích thêm."""
+VÍ DỤ OUTPUT:
+Kế hoạch thi năm 2026 — KỲ THI: Tháng 01; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 17/01/2026; KTHP NGOẠI NGỮ 1,2,3: 17/01/2026; CHỨNG CHỈ ỨNG DỤNG CNTT: 18/01/2026; VSTEP: 24,25/01/2026; THỜI GIAN THU HỒ SƠ VSTEP: 08/12/2025-09/01/2026.
+Kế hoạch thi năm 2026 — KỲ THI: Tháng 02; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 07/02/2026; CHỨNG CHỈ ỨNG DỤNG CNTT: 08/02/2026; VSTEP: 28/02,01/3/2026; THỜI GIAN THU HỒ SƠ VSTEP: 12/01/2026-08/02/2026.
+
+Nếu không có bảng nào: KHÔNG_CÓ_BẢNG
+Chỉ trả về các dòng dữ liệu theo định dạng trên, không giải thích thêm."""
 
     # Thử Groq vision
     result = await _try_groq_vision(b64, prompt)
@@ -397,30 +687,49 @@ async def _try_anthropic_vision(b64_image: str, prompt: str) -> str | None:
 def _parse_ai_table_response(response_text: str) -> list[ExtractedTable]:
     """
     Parse response từ AI thành list[ExtractedTable].
-    AI trả về 1 hoặc nhiều bảng Markdown.
+
+    Với prompt mới, AI trả về các dòng prose dạng:
+        "Tên bảng — Cột A: val; Cột B: val."
+    thay vì Markdown table. Hàm này nhận diện cả 2 format.
     """
     if not response_text or "KHÔNG_CÓ_BẢNG" in response_text:
         return []
 
-    # Tách bảng bằng header [BẢNG N] hoặc lấy toàn bộ
     import re
+
+    # ── Format mới: prose với dấu " — " (ưu tiên) ──────────────────────────
+    # Nhận ra khi có ít nhất 1 dòng chứa pattern "tên — key: val; key: val."
+    prose_lines = [
+        l.strip() for l in response_text.splitlines()
+        if " — " in l and ":" in l and l.strip()
+    ]
+
+    if prose_lines:
+        # Gộp tất cả dòng prose thành 1 bảng duy nhất (đã là văn xuôi sẵn)
+        prose_text = "\n".join(prose_lines)
+        return [ExtractedTable(
+            table_index=0,
+            method="ai_vision",
+            # Lưu vào markdown field nhưng đánh dấu đây là prose
+            markdown=f"__PROSE__\n{prose_text}",
+            confidence=0.95,
+        )]
+
+    # ── Format cũ fallback: Markdown table ──────────────────────────────────
     sections = re.split(r'\[BẢNG\s*\d+\]', response_text)
     sections = [s.strip() for s in sections if s.strip()]
 
     tables: list[ExtractedTable] = []
     for idx, section in enumerate(sections):
-        # Tìm block Markdown table trong section
         lines = [l for l in section.split("\n") if l.strip().startswith("|")]
         if lines:
-            markdown = "\n".join(lines)
             tables.append(ExtractedTable(
                 table_index=idx,
                 method="ai_vision",
-                markdown=markdown,
+                markdown="\n".join(lines),
                 confidence=0.85,
             ))
         elif "|" in section:
-            # Đôi khi AI không format chuẩn, giữ nguyên
             tables.append(ExtractedTable(
                 table_index=idx,
                 method="ai_vision",
@@ -429,7 +738,6 @@ def _parse_ai_table_response(response_text: str) -> list[ExtractedTable]:
             ))
 
     if not tables and "|" in response_text:
-        # Fallback: lấy toàn bộ response nếu có pipe character
         tables.append(ExtractedTable(
             table_index=0,
             method="ai_vision",

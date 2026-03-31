@@ -1,17 +1,3 @@
-"""
-Scanned PDF Loader — xử lý PDF không có text layer (ảnh scan).
-
-Vấn đề: Kreuzberg/PyMuPDF không extract được text từ PDF scan
-vì các trang là ảnh thuần, không có text layer.
-
-Giải pháp:
-  1. Phát hiện PDF scan (page.get_text() == "")
-  2. Render từng trang thành ảnh PNG ở 300 DPI
-  3. Tiền xử lý ảnh (image_preprocessor)
-  4. OCR bằng EasyOCR
-  5. Extract bảng nếu có (table_extractor)
-  6. Trả về list[LoadedChunk] như loader thông thường
-"""
 from __future__ import annotations
 
 import io
@@ -25,10 +11,7 @@ SCAN_TEXT_THRESHOLD = 50
 
 
 def is_scanned_pdf(file_bytes: bytes) -> bool:
-    """
-    Kiểm tra PDF có phải scan không.
-    Trả về True nếu TOÀN BỘ các trang đều thiếu text layer.
-    """
+
     try:
         import fitz
         doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -52,18 +35,7 @@ async def load_scanned_pdf(
     dpi: int = 300,
     extract_tables: bool = True,
 ) -> list[LoadedChunk]:
-    """
-    Load scanned PDF → render từng trang thành ảnh → OCR + table extract.
 
-    Args:
-        file_bytes: Raw PDF bytes
-        filename: Tên file gốc
-        dpi: Độ phân giải render (300 DPI là chuẩn OCR)
-        extract_tables: Có extract bảng không
-
-    Returns:
-        list[LoadedChunk] — mỗi trang là 1-2 chunks (text + tables)
-    """
     try:
         import fitz
     except ImportError:

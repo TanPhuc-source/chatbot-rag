@@ -173,7 +173,8 @@ async def _chitchat_response(
     )
     messages = [{"role": "system", "content": chitchat_system}]
     if history:
-        messages.extend(history[-4:])
+        from app.rag.prompts import trim_history_to_token_budget
+        messages.extend(trim_history_to_token_budget(history, token_budget=800, max_turns=4))
     messages.append({"role": "user", "content": question})
 
     llm = get_llm_provider()
@@ -197,7 +198,8 @@ async def _chitchat_stream(
     )
     messages = [{"role": "system", "content": chitchat_system}]
     if history:
-        messages.extend(history[-4:])
+        from app.rag.prompts import trim_history_to_token_budget
+        messages.extend(trim_history_to_token_budget(history, token_budget=800, max_turns=4))
     messages.append({"role": "user", "content": question})
 
     llm = get_llm_provider()

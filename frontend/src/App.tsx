@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import axios from 'axios';
+import api from '@/lib/api';
 
 import AdminLayout from '@/pages/AdminLayout';
 import AdminDashboard from '@/pages/AdminDashboard';
@@ -18,36 +18,23 @@ import UserProfilePage from '@/pages/UserProfilePage';
 import ChatPage from '@/pages/ChatPage';
 import SettingPage from '@/pages/SettingPage';
 import DocumentChunksPage from '@/pages/DocumentChunksPage';
-import { ForgotPasswordPage } from './auth/ForgotPasswordPage';
-import ResetPasswordPage from './auth/ResetPasswordPage';
 import PermissionsPage from '@/pages/PermissionsPage';
 
-const API = 'http://127.0.0.1:8000';
-
 function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const { init, logout } = useAuthStore();
+  const { init } = useAuthStore();
   const [ready, setReady] = useState(false);
+  const initialized = useRef(false); // ngăn StrictMode gọi 2 lần
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      init(); // không có token, init bình thường
-      setReady(true);
-      return;
-    }
-    // Verify token với backend
-    axios.get(`${API}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(() => { init(); setReady(true); })
-      .catch(() => { logout(); setReady(true); }); // token hết hạn → logout
+    if (initialized.current) return;
+    initialized.current = true;
+    init().finally(() => setReady(true));
   }, []);
 
   if (!ready) return null;
   return <>{children}</>;
 }
 
-// Guard cho toàn bộ khu vực admin (admin + staff)
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, role } = useAuthStore();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
@@ -55,7 +42,6 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Guard chỉ admin — không thể override bằng permission (dashboard, accounts, settings, permissions)
 function AdminOnlyGuard({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, role } = useAuthStore();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
@@ -63,19 +49,20 @@ function AdminOnlyGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Guard theo feature permission — admin luôn qua, staff kiểm tra /permissions/me
 function FeatureGuard({ feature, children }: { feature: string; children: React.ReactNode }) {
-  const { isLoggedIn, role } = useAuthStore();
+  const { isLoggedIn, role, cookieReady } = useAuthStore();
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) { setAllowed(false); return; }
+    // Chờ cookieReady — đảm bảo cookie đã flush trước khi fetch permissions
+    if (!isLoggedIn || !cookieReady) { setAllowed(null); return; }
     if (role === 'admin') { setAllowed(true); return; }
-    const token = localStorage.getItem('access_token');
-    axios.get(`${API}/permissions/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setAllowed(res.data[feature] === true))
-      .catch(() => setAllowed(false));
-  }, [isLoggedIn, role, feature]);
+    let cancelled = false;
+    api.get('/permissions/me')
+      .then(res => { if (!cancelled) setAllowed(res.data[feature] === true); })
+      .catch(() => { if (!cancelled) setAllowed(false); });
+    return () => { cancelled = true; };
+  }, [isLoggedIn, cookieReady, role, feature]);
 
   if (!isLoggedIn) return <Navigate to="/login" replace />;
   if (allowed === null) return null; // loading
@@ -100,27 +87,18 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="usersProfile" element={<UserProfilePage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
-
-              {/* ── Admin only ── */}
               <Route index           element={<AdminOnlyGuard><AdminDashboard /></AdminOnlyGuard>} />
               <Route path="accounts"    element={<AdminOnlyGuard><AccountManagementPage /></AdminOnlyGuard>} />
               <Route path="permissions" element={<AdminOnlyGuard><PermissionsPage /></AdminOnlyGuard>} />
               <Route path="settings"    element={<AdminOnlyGuard><SettingPage /></AdminOnlyGuard>} />
-
-              {/* ── Có thể cấp thêm cho staff ── */}
               <Route path="analytics"   element={<FeatureGuard feature="analytics"><AnalyticsPage /></FeatureGuard>} />
               <Route path="bot-settings" element={<FeatureGuard feature="bot_settings"><BotSettingsPage /></FeatureGuard>} />
-
-              {/* ── Staff mặc định (AdminGuard bên ngoài đã đủ) ── */}
               <Route path="records"  element={<AdminRecordsPage />} />
               <Route path="records/:documentId/chunks" element={<DocumentChunksPage />} />
               <Route path="faq"      element={<FAQPage />} />
               <Route path="feedback" element={<FeedbackPage />} />
-
             </Route>
           </Routes>
         </AuthInitializer>

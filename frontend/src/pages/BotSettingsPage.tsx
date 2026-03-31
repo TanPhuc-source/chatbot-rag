@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
     RefreshCw, Menu, Save, RotateCcw,
     CheckCircle, XCircle, Info, Bot,
@@ -18,7 +19,7 @@ interface Settings {
 }
 interface Toast { id: string; message: string; type: 'success' | 'error' | 'info'; }
 
-const API = 'http://127.0.0.1:8000';
+const API = '';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function Section({ icon, title, subtitle, children }: {
 
 export default function BotSettingsPage() {
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
     const { setIsMobileMenuOpen } = useOutletContext<any>();
 
     const [settings, setSettings] = useState<Settings | null>(null);
@@ -71,7 +72,7 @@ export default function BotSettingsPage() {
     const [isDirty, setIsDirty] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
 
-    useEffect(() => { if (!token) navigate('/login'); }, [token]);
+    useEffect(() => { if (!isLoggedIn) navigate('/login'); }, [isLoggedIn]);
 
     const addToast = useCallback((message: string, type: Toast['type'] = 'success') => {
         const id = Math.random().toString(36).slice(2, 9);
@@ -82,7 +83,8 @@ export default function BotSettingsPage() {
     const fetchSettings = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`${API}/settings`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/settings`, {
+                credentials: 'include', });
             if (!res.ok) throw new Error('Không thể tải cấu hình');
             const data: Settings = await res.json();
             setSettings(data);
@@ -90,7 +92,7 @@ export default function BotSettingsPage() {
             setIsDirty(false);
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsLoading(false); }
-    }, [token]);
+    }, [isLoggedIn]);
 
     useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
@@ -105,8 +107,9 @@ export default function BotSettingsPage() {
         setIsSaving(true);
         try {
             const res = await fetch(`${API}/settings`, {
+                credentials: 'include',
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form),
             });
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || 'Lỗi lưu'); }
@@ -121,7 +124,8 @@ export default function BotSettingsPage() {
     const handleReset = async () => {
         setIsResetting(true);
         try {
-            const res = await fetch(`${API}/settings/reset`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/settings/reset`, {
+                credentials: 'include', method: 'POST' });
             if (!res.ok) throw new Error('Reset thất bại');
             const data = await res.json();
             setSettings(data);

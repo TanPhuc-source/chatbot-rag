@@ -15,8 +15,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import axios from "axios";
+
 import { useSettingsStore } from "@/store/settingsStore";
+import api from "@/lib/api";
 import logoImage from "../images/images.jpg";
 
 const SCHOOL_INFO = {
@@ -44,7 +45,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
     deleteConversation
   } = useChatStore();
 
-  const { isLoggedIn, logout, init } = useAuthStore() as any;
+  const { isLoggedIn, logout } = useAuthStore() as any;
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -57,27 +58,21 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
   }, [fetchSettings]);
 
   useEffect(() => {
-    init();
-  }, [init]);
-
-  useEffect(() => {
+    if (!isLoggedIn) {
+      setCurrentUser(null);
+      return;
+    }
     const fetchUserData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (token) {
-        try {
-          const response = await axios.get("http://127.0.0.1:8000/auth/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setCurrentUser(response.data);
-          loadHistory(token); // Tải lịch sử cuộc trò chuyện sau khi lấy được thông tin người dùng
-
-        } catch (error) {
-          console.error("Lỗi lấy thông tin user:", error);
-        }
+      try {
+        const response = await api.get("/auth/me");
+        setCurrentUser(response.data);
+        loadHistory();
+      } catch (error) {
+        console.error("Lỗi lấy thông tin user:", error);
       }
     };
     fetchUserData();
-  }, [loadHistory]);
+  }, [isLoggedIn, loadHistory]);
 
   const T = "0.28s cubic-bezier(0.4,0,0.2,1)";
 
@@ -85,12 +80,8 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
     clearMessages();
     onClose?.();
   };
-  // Sửa lại hàm handleSelect
   const handleSelect = (id: string) => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      selectConversation(id, token); // Gọi hàm khôi phục tin nhắn từ DB
-    }
+    selectConversation(id); // Cookie tự gửi, không cần token
     onClose?.();
   };
 
@@ -113,7 +104,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
 
   const displayName = currentUser?.full_name || currentUser?.username || "Tài khoản";
   const avatarSrc = currentUser?.avatar_url
-    ? `http://127.0.0.1:8000${currentUser.avatar_url}`
+    ? `${currentUser.avatar_url}`
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(
       displayName
     )}&background=0D8ABC&color=fff&bold=true`;
@@ -404,10 +395,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
                     onClick={(e) => {
                       e.preventDefault(); // <-- THÊM DÒNG NÀY ĐỂ CHỐNG RELOAD TRANG
                       e.stopPropagation();
-                      const token = localStorage.getItem("access_token");
-                      if (token) {
-                        deleteConversation(conv.id, token);
-                      }
+                      deleteConversation(conv.id); // Cookie tự gửi
                     }}
                   >
                     <Trash2 size={16} />
@@ -419,48 +407,7 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         </nav>
 
         {/* Footer - user profile */}
-        <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Profile card - Bấm để hiện popup menu qua Portal */}
-          <div
-            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            title={collapsed ? "Tài khoản" : undefined}
-            style={{ display: "flex", alignItems: "center", cursor: "pointer", padding: collapsed ? 0 : 8, height: collapsed ? 44 : "auto", borderRadius: 14, border: isUserMenuOpen ? "1px solid var(--border)" : "1px solid transparent", background: isUserMenuOpen ? "var(--bg-2)" : "transparent", transition: "all 0.2s" }}
-            className="hover:bg-[var(--bg-2)] hover:border-[var(--border)]"
-          >
-            <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-3)", color: "var(--text-secondary)", flexShrink: 0, overflow: "hidden", border: "1px solid var(--border)", transition: `all ${T}` }}>
-              {isLoggedIn || currentUser ? (
-                <img src={avatarSrc} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                <User size={20} />
-              )}
-            </div>
 
-            <div style={slideText({ paddingLeft: 12, flex: 1 })}>
-              {isLoggedIn || currentUser ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {displayName}
-                    </p>
-                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                      {currentUser?.role === "admin" ? "Quản trị viên" : "Người dùng"}
-                    </p>
-                  </div>
-                  <ChevronUp size={18} style={{ color: "var(--text-muted)", transition: "transform 0.2s", transform: isUserMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
-                </div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Khách</p>
-                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>Chưa đăng nhập</p>
-                  </div>
-                  <ChevronUp size={18} style={{ color: "var(--text-muted)", transition: "transform 0.2s", transform: isUserMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </aside>
     </>
   );

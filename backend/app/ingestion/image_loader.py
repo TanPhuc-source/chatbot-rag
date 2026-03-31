@@ -1,12 +1,3 @@
-"""
-Image Loader — Load ảnh thành LoadedChunk cho pipeline RAG.
-
-Flow:
-  1. Tiền xử lý ảnh (image_preprocessor)
-  2. EasyOCR đọc full text (body text)
-  3. Table extractor tìm và đọc bảng
-  4. Gộp lại thành chunks: [text chunk] + [table chunks]
-"""
 from __future__ import annotations
 
 import io
@@ -71,7 +62,6 @@ async def load_image_bytes(
     # ── Bước 3: Extract bảng ────────────────────────────────────────────────
     if extract_tables:
         try:
-            # Dùng ảnh preprocess ở mode "table" — giữ grayscale, không binarize mạnh
             table_bytes = preprocess_for_ocr(image_bytes, mode="table")
             tables = await extract_tables_from_image(table_bytes, filename=filename)
 
@@ -91,6 +81,13 @@ async def load_image_bytes(
                     total_chunks=len(chunks) + 1,
                 ))
                 logger.info(f"Extracted {len(tables)} table(s) from {filename}")
+
+                # Khi đã có bảng được trích xuất đúng cấu trúc, bỏ chunk OCR raw
+                # vì nó chứa cùng dữ liệu nhưng dạng text lộn xộn không có tên cột
+                # → giữ lại OCR raw chỉ khi không tìm thấy bảng nào
+                if chunks and chunks[0].metadata.get("source_type") == "image_ocr":
+                    logger.debug(f"Dropping raw OCR chunk — table chunk covers {filename}")
+                    chunks.pop(0)
 
         except Exception as e:
             logger.warning(f"Table extraction failed for {filename}: {e}")

@@ -1,9 +1,3 @@
-"""
-Bot Settings API
-GET  /settings        — lấy config hiện tại (public, dùng cho chat UI)
-PUT  /settings        — admin cập nhật config
-POST /settings/reset  — admin reset về mặc định
-"""
 from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -35,6 +29,8 @@ Nguyên tắc:
 - Nếu các tài liệu cung cấp thông tin mâu thuẫn nhau, hãy trình bày cả hai quan điểm rõ ràng và khuyên người dùng xác nhận lại trực tiếp với bộ phận liên quan để có thông tin chính xác nhất."""
 
 
+# ── Schemas ────────────────────────────────────────────────────────────────
+
 class SettingsOut(BaseModel):
     id: int
     bot_name: str
@@ -44,6 +40,10 @@ class SettingsOut(BaseModel):
     updated_at: datetime
     class Config: from_attributes = True
 
+# Thêm Schema mới chỉ chứa dữ liệu an toàn để public
+class PublicSettingsOut(BaseModel):
+    bot_name: str
+    class Config: from_attributes = True
 
 class SettingsIn(BaseModel):
     bot_name: Optional[str] = None
@@ -51,6 +51,8 @@ class SettingsIn(BaseModel):
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
 
+
+# ── Helpers ────────────────────────────────────────────────────────────────
 
 def get_or_create_settings(db: Session) -> models.BotSettings:
     s = db.query(models.BotSettings).filter(models.BotSettings.id == 1).first()
@@ -68,8 +70,22 @@ def get_or_create_settings(db: Session) -> models.BotSettings:
     return s
 
 
+# ── Endpoints ──────────────────────────────────────────────────────────────
+
+# 1. Endpoint Public (Ai cũng gọi được, nhưng thông tin bị giới hạn)
+@router.get("/public", response_model=PublicSettingsOut)
+def get_public_settings(db: Session = Depends(get_db)):
+    """API dùng cho Frontend Chat UI để hiển thị tên Bot."""
+    return get_or_create_settings(db)
+
+
+# 2. Endpoint Admin (Chỉ Admin mới xem được System Prompt & LLM Config)
 @router.get("", response_model=SettingsOut)
-def get_settings_endpoint(db: Session = Depends(get_db)):
+def get_settings_endpoint(
+    current_user: models.User = Depends(get_admin_user), 
+    db: Session = Depends(get_db)
+):
+    """API dùng cho Admin Dashboard xem cấu hình chi tiết."""
     return get_or_create_settings(db)
 
 

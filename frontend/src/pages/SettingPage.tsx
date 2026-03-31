@@ -91,10 +91,8 @@ export default function SettingsPage() {
 
     // ── Save ───────────────────────────────────────────────────────────────────
     const handleSave = async () => {
-        const token = localStorage.getItem('access_token');
-        if (!token) { addToast('Bạn chưa đăng nhập!', 'error'); return; }
         try {
-            await updateSettings(formData, token);
+            await updateSettings(formData);
             addToast('Cập nhật giao diện Chatbot thành công!', 'success');
         } catch {
             addToast('Cập nhật thất bại. Vui lòng thử lại.', 'error');
@@ -103,10 +101,8 @@ export default function SettingsPage() {
 
     // ── Reset ──────────────────────────────────────────────────────────────────
     const handleReset = async () => {
-        const token = localStorage.getItem('access_token');
-        if (!token) { addToast('Bạn chưa đăng nhập!', 'error'); return; }
         try {
-            await resetSettings(token);
+            await resetSettings();
             setConfirmReset(false);
             addToast('Đã reset về mặc định!', 'info');
         } catch {

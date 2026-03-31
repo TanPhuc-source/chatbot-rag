@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
     MessageSquare, Trash2, RefreshCw, Search, Menu,
     X, ChevronLeft, ChevronRight,
@@ -80,7 +81,7 @@ const PAGE_SIZE = 10;
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
         setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -101,7 +102,7 @@ export default function AdminDashboard() {
     const [confirmDeleteBulk, setConfirmDeleteBulk] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
 
-    useEffect(() => { if (!token) navigate('/login'); }, [token, navigate]);
+    useEffect(() => { if (!isLoggedIn) navigate('/login'); }, [isLoggedIn, navigate]);
 
     const addToast = useCallback((message: string, type: Toast['type'] = 'success') => {
         const id = Math.random().toString(36).slice(2, 9);
@@ -110,12 +111,12 @@ export default function AdminDashboard() {
     }, []);
 
     const fetchSessions = useCallback(async () => {
-        if (!token) return;
+        if (!isLoggedIn || !cookieReady) return;
         setIsLoading(true);
         try {
-            const res = await fetch('http://127.0.0.1:8000/history/admin/sessions?limit=1000', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch('/history/admin/sessions?limit=1000', {
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không thể tải danh sách phiên chat');
             setSessions(await res.json());
         } catch (err: any) {
@@ -123,7 +124,7 @@ export default function AdminDashboard() {
         } finally {
             setIsLoading(false);
         }
-    }, [token, addToast]);
+    }, [isLoggedIn, cookieReady, addToast]);
 
     useEffect(() => { fetchSessions(); }, [fetchSessions]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm]);
@@ -133,9 +134,7 @@ export default function AdminDashboard() {
         setMessages([]);
         setIsLoadingMessages(true);
         try {
-            const res = await fetch(`http://127.0.0.1:8000/history/admin/sessions/${session.id}/messages`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(`/history/admin/sessions/${session.id}/messages`, { credentials: 'include' });
             if (!res.ok) throw new Error('Không tải được nội dung');
             setMessages(await res.json());
         } catch (err: any) {
@@ -149,10 +148,7 @@ export default function AdminDashboard() {
     const handleDelete = async (id: number) => {
         setIsDeleting(true);
         try {
-            const res = await fetch(`http://127.0.0.1:8000/history/admin/sessions/${id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(`/history/admin/sessions/${id}`, { credentials: 'include', method: 'DELETE', });
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || `Lỗi ${res.status}`); }
             setSessions(prev => prev.filter(s => s.id !== id));
             setSelectedIds(prev => prev.filter(i => i !== id));
@@ -171,9 +167,7 @@ export default function AdminDashboard() {
         let ok = 0;
         for (const id of selectedIds) {
             try {
-                const res = await fetch(`http://127.0.0.1:8000/history/admin/sessions/${id}`, {
-                    method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-                });
+                const res = await fetch(`/history/admin/sessions/${id}`, { credentials: 'include', method: 'DELETE', });
                 if (res.ok) ok++;
             } catch { }
         }
@@ -215,7 +209,7 @@ export default function AdminDashboard() {
         return pages;
     };
 
-    if (!token) return null;
+    if (!isLoggedIn) return null;
 
     return (
         <>

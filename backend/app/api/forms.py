@@ -1,12 +1,4 @@
-"""
-Forms API — quản lý biểu mẫu / đơn từ
 
-GET    /forms                → danh sách biểu mẫu đang active (public — bot & người dùng dùng)
-POST   /forms/upload         → upload biểu mẫu mới            (admin only)
-PATCH  /forms/{id}           → đổi tên / mô tả / ẩn hiện      (admin only)
-DELETE /forms/{id}           → xóa vĩnh viễn                   (admin only)
-GET    /forms/{id}/download  → tải file về                     (public)
-"""
 from __future__ import annotations
 
 import os
@@ -15,7 +7,9 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Request
+from jose import jwt, JWTError
+from app.config import get_settings
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -23,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.db_dependencies import get_admin_user
 from app.db.database import get_db
 from app.db import models
+
 
 router = APIRouter()
 
@@ -56,6 +51,21 @@ class FormUpdate(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
+def get_optional_user(request: Request, db: Session = Depends(get_db)) -> Optional[models.User]:
+    """Đọc token từ HttpOnly Cookie để xác định user mà không bắt buộc đăng nhập."""
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        settings = get_settings()
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            return None
+        return db.query(models.User).filter(models.User.username == username).first()
+    except JWTError:
+        return None
+
 def _to_response(form: models.FormTemplate) -> FormResponse:
     return FormResponse(
         id=form.id,
@@ -79,6 +89,24 @@ def _get_file_type(filename: str) -> str:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────
+
+@router.get("", response_model=list[FormResponse])
+def list_forms(
+    request: Request, # Thêm Request để slowapi hoặc helper có thể đọc cookie
+    include_inactive: bool = False,
+    current_user: Optional[models.User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
+    if include_inactive:
+        if not current_user or current_user.role != "admin":
+            include_inactive = False  # Âm thầm ép về False
+
+    q = db.query(models.FormTemplate)
+    if not include_inactive:
+        q = q.filter(models.FormTemplate.is_active == True)
+        
+    forms = q.order_by(models.FormTemplate.created_at.desc()).all()
+    return [_to_response(f) for f in forms]
 
 @router.get("", response_model=list[FormResponse])
 def list_forms(
@@ -116,7 +144,7 @@ async def upload_form(
     unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
     file_path = FORMS_DIR / unique_filename
 
-    with open(file_path, "wb") as buffer:
+    with open(file_path, "wb", encoding="utf-8") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     form = models.FormTemplate(

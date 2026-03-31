@@ -3,81 +3,37 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff,
-    CheckCircle, Mail, Phone, MapPin, Heart, X, Calendar, LogIn
+    CheckCircle, X
 } from 'lucide-react'
-import axios, { AxiosError } from 'axios'
+import axios from 'axios'
+import api from '@/lib/api'
 import logoImage from '../components/images/images.jpg';
 import { useAuthStore } from '@/store/authStore';
 
-// --- Định nghĩa kiểu dữ liệu ---
 interface StatusState {
     success: boolean;
     message: string;
 }
 
-interface FormDataState {
-    username: string;
-    email: string;
-    password: string;
-    full_name: string;
-    gender: string;
-    date_of_birth: string;
-    phone: string;
-    address: string;
-}
-
 export default function LoginPage() {
     const navigate = useNavigate()
     const authLogin = useAuthStore((s) => s.login);
+    const authInit = useAuthStore((s) => s.init);
 
-    const [isLoginMode, setIsLoginMode] = useState<boolean>(true)
     const [showPassword, setShowPassword] = useState<boolean>(false)
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [status, setStatus] = useState<StatusState | null>(null)
-    const [currentStep, setCurrentStep] = useState<number>(1)
-    const [agreeTerms, setAgreeTerms] = useState<boolean>(false)
-    const [formData, setFormData] = useState<FormDataState>({
-        username: '', email: '', password: '', full_name: '',
-        gender: '', date_of_birth: '', phone: '', address: ''
-    })
 
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout>;
         if (status) {
-            timer = setTimeout(() => {
-                setStatus(null);
-            }, 8000);
+            timer = setTimeout(() => setStatus(null), 8000);
         }
-        return () => {
-            if (timer) clearTimeout(timer);
-        };
+        return () => { if (timer) clearTimeout(timer); };
     }, [status]);
-
-    const fadeInUp = {
-        initial: { opacity: 0, y: 20 },
-        animate: { opacity: 1, y: 0 },
-        exit: { opacity: 0, y: -20 }
-    }
-
-    const stepVariants = {
-        enter: { x: 50, opacity: 0 },
-        center: { x: 0, opacity: 1 },
-        exit: { x: -50, opacity: 0 }
-    }
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-        setFormData(prev => ({ ...prev, [name]: value }))
-    }
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-
-        if (!isLoginMode && !agreeTerms) {
-            setStatus({ success: false, message: 'Vui lòng đồng ý với điều khoản sử dụng!' })
-            return
-        }
-
         setIsLoading(true)
         setStatus(null)
 
@@ -86,53 +42,29 @@ export default function LoginPage() {
         const password = submitData.get('password') as string
 
         try {
-            if (isLoginMode) {
-                const urlEncodedData = new URLSearchParams()
-                if (username) urlEncodedData.append('username', username)
-                if (password) urlEncodedData.append('password', password)
+            const urlEncodedData = new URLSearchParams()
+            if (username) urlEncodedData.append('username', username)
+            if (password) urlEncodedData.append('password', password)
 
-                const response = await axios.post('http://127.0.0.1:8000/auth/login', urlEncodedData, {
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                })
+            const response = await api.post('/auth/login', urlEncodedData, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            })
 
-                const { access_token, role } = response.data;
-                authLogin(access_token, role, username);
+            const { role, username: returnedUsername } = response.data;
+            authLogin(role, returnedUsername ?? username);
+            await authInit();
 
-                setStatus({ success: true, message: 'Đăng nhập thành công! Đang chuyển hướng...' })
+            setStatus({ success: true, message: 'Đăng nhập thành công! Đang chuyển hướng...' })
 
-                setTimeout(() => {
-                    if (role === 'admin') navigate('/admin/analytics');
-                    else if (role === 'staff') navigate('/admin/records');
-                    else navigate('/');
-                }, 1200)
+            setTimeout(() => {
+                if (role === 'admin') navigate('/admin/analytics');
+                else if (role === 'staff') navigate('/admin/records');
+                else navigate('/');
+            }, 1200)
 
-            } else {
-                const payload = {
-                    username: formData.username,
-                    email: formData.email,
-                    password: formData.password,
-                    full_name: formData.full_name || undefined,
-                    gender: formData.gender || undefined,
-                    date_of_birth: formData.date_of_birth || undefined,
-                    phone: formData.phone || undefined,
-                    address: formData.address || undefined,
-                };
-
-                await axios.post('http://127.0.0.1:8000/auth/register', payload)
-
-                setStatus({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' })
-
-                setTimeout(() => {
-                    setIsLoginMode(true)
-                    setStatus(null)
-                    setCurrentStep(1)
-                    setFormData({ username: '', email: '', password: '', full_name: '', gender: '', date_of_birth: '', phone: '', address: '' })
-                }, 1500)
-            }
         } catch (error) {
             console.error("Lỗi:", error)
-            let errorMsg = isLoginMode ? 'Tài khoản hoặc mật khẩu không chính xác!' : 'Đã có lỗi xảy ra khi đăng ký!'
-
+            let errorMsg = 'Tài khoản hoặc mật khẩu không chính xác!'
             if (axios.isAxiosError(error) && error.response?.data?.detail) {
                 errorMsg = error.response.data.detail
             }
@@ -142,38 +74,7 @@ export default function LoginPage() {
         }
     }
 
-    const toggleMode = () => {
-        setIsLoginMode(!isLoginMode)
-        setStatus(null)
-        setCurrentStep(1)
-        setFormData({
-            username: '', email: '', password: '', full_name: '',
-            gender: '', date_of_birth: '', phone: '', address: ''
-        })
-    }
-
-    const nextStep = () => {
-        if (currentStep === 1) {
-            if (!formData.username || !formData.email || !formData.password) {
-                setStatus({ success: false, message: 'Vui lòng điền đầy đủ thông tin bắt buộc!' })
-                return
-            }
-            if (formData.password.length < 6) {
-                setStatus({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự!' })
-                return
-            }
-        }
-        setCurrentStep(prev => prev + 1)
-        setStatus(null)
-    }
-
-    const prevStep = () => {
-        setCurrentStep(prev => prev - 1)
-        setStatus(null)
-    }
-
     const handleGuestLogin = () => {
-        localStorage.removeItem('access_token');
         localStorage.removeItem('user_role');
         navigate('/');
     }
@@ -201,21 +102,13 @@ export default function LoginPage() {
                             >
                                 <X size={18} />
                             </button>
-
-                            {/* Đổi màu icon: Thành công -> Xanh dương (blue/sky), Lỗi -> Đỏ (rose) */}
                             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${status.success ? 'bg-sky-100 text-sky-600' : 'bg-rose-100 text-rose-600'}`}>
                                 {status.success ? <CheckCircle size={32} /> : <AlertCircle size={32} />}
                             </div>
-
                             <h3 className="text-xl font-bold text-slate-800 mb-2">
                                 {status.success ? 'Thành công!' : 'Thông báo'}
                             </h3>
-
-                            <p className="text-slate-600 text-sm mb-6">
-                                {status.message}
-                            </p>
-
-                            {/* Đổi màu nút bấm: Thành công -> Xanh dương, Lỗi -> Đỏ */}
+                            <p className="text-slate-600 text-sm mb-6">{status.message}</p>
                             <button
                                 onClick={() => setStatus(null)}
                                 className={`w-full py-2.5 rounded-xl font-bold text-white transition-all shadow-md active:scale-95 ${status.success ? 'bg-sky-600 hover:bg-sky-700 shadow-sky-200' : 'bg-rose-500 hover:bg-rose-600 shadow-rose-200'}`}
@@ -231,14 +124,14 @@ export default function LoginPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="bg-white/90 backdrop-blur-xl w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20"
+                className="bg-white/90 backdrop-blur-xl w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/20"
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[550px] lg:min-h-[600px]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[500px]">
 
+                    {/* Left panel */}
                     <div className="hidden lg:flex flex-col items-center justify-center p-12 bg-gradient-to-br from-[#1e3a8a] via-[#1e40af] to-[#312e81] text-white text-center relative overflow-hidden">
                         <div className="absolute inset-0 bg-[url('https://www.dthu.edu.vn/images/slider/02.jpg')] bg-cover bg-center opacity-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-[#1e3a8a]/90 to-transparent"></div>
-
                         <div className="relative z-10 flex flex-col items-center">
                             <div className="w-28 h-28 bg-white rounded-full p-2 shadow-xl mb-6 flex items-center justify-center transform hover:scale-105 transition-transform duration-500">
                                 <img src={logoImage} alt="Logo" className="w-full h-full object-cover rounded-full" />
@@ -258,9 +151,9 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    {/* Đã thêm max-h-[100vh] và custom-scrollbar để cuộn mượt nếu form quá dài */}
-                    <div className="p-6 lg:p-12 bg-white flex flex-col justify-center max-h-[100vh] overflow-y-auto custom-scrollbar">
-                        <div className="max-w-md mx-auto w-full">
+                    {/* Right panel - Login only */}
+                    <div className="p-8 lg:p-12 bg-white flex flex-col justify-center">
+                        <div className="max-w-sm mx-auto w-full">
 
                             <div className="lg:hidden flex justify-center mb-6">
                                 <div className="w-16 h-16 bg-sky-50 rounded-full p-1 flex items-center justify-center">
@@ -268,402 +161,85 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-6">
-                                <h2 className="text-3xl font-bold text-gray-800 mb-2 text-center">
-                                    {isLoginMode ? 'Đăng Nhập' : 'Tạo Tài Khoản'}
-                                </h2>
+                            <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-8">
+                                <h2 className="text-3xl font-bold text-gray-800 mb-1 text-center">Đăng Nhập</h2>
+                                <p className="text-sm text-gray-500 text-center">Vui lòng nhập thông tin tài khoản</p>
                             </motion.div>
 
-                            {!isLoginMode && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
-                                    <div className="flex items-center w-full mb-2">
-                                        {[1, 2].map((step, index) => (
-                                            <React.Fragment key={step}>
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 shrink-0
-                                                    ${currentStep >= step
-                                                        ? 'bg-sky-600 text-white shadow-lg shadow-sky-200'
-                                                        : 'bg-gray-100 text-gray-400'}`}
-                                                >
-                                                    {currentStep > step ? <CheckCircle size={16} /> : step}
-                                                </div>
-
-                                                {index < 1 && (
-                                                    <div className={`flex-1 h-1 mx-2 rounded transition-all duration-300
-                                                        ${currentStep > step ? 'bg-sky-600' : 'bg-gray-200'}`}
-                                                    />
-                                                )}
-                                            </React.Fragment>
-                                        ))}
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
+                                        Tên đăng nhập <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="relative group">
+                                        <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            placeholder="Nhập tên đăng nhập..."
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
+                                            required
+                                        />
                                     </div>
-                                    <div className="flex justify-between text-xs text-gray-500">
-                                        <span className="text-left">Tài khoản</span>
-                                        <span className="text-right">Hoàn tất</span>
-                                    </div>
-                                </motion.div>
-                            )}
+                                </div>
 
-                            <form onSubmit={handleSubmit}>
-                                <AnimatePresence mode="wait">
-                                    {isLoginMode ? (
-                                        <motion.div
-                                            key="login"
-                                            variants={fadeInUp}
-                                            initial="initial"
-                                            animate="animate"
-                                            exit="exit"
-                                            className="space-y-4"
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
+                                        Mật khẩu <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="relative group">
+                                        <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            name="password"
+                                            placeholder="••••••••"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-12 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sky-600 transition-colors"
                                         >
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                    Tên đăng nhập <span className="text-rose-500">*</span>
-                                                </label>
-                                                <div className="relative group">
-                                                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
-                                                    <input
-                                                        type="text"
-                                                        name="username"
-                                                        placeholder="Nhập tên đăng nhập..."
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
 
-                                            <div>
-                                                <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                    Mật khẩu <span className="text-rose-500">*</span>
-                                                </label>
-                                                <div className="relative group">
-                                                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-sky-600 transition-colors" />
-                                                    <input
-                                                        type={showPassword ? "text" : "password"}
-                                                        name="password"
-                                                        placeholder="••••••••"
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-12 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
-                                                        required
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sky-600 transition-colors"
-                                                    >
-                                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center justify-between pb-2">
-                                                <label className="flex items-center gap-2 cursor-pointer"></label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => navigate('/forgot-password')}
-                                                    className="text-sm text-sky-600 hover:text-sky-800 font-medium"
-                                                >
-                                                    Quên mật khẩu?
-                                                </button>
-                                            </div>
-
-                                            <button
-                                                type="submit"
-                                                disabled={isLoading}
-                                                className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:shadow-sky-300 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
-                                            >
-                                                {isLoading ? (
-                                                    <Loader2 size={18} className="animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        Đăng Nhập
-                                                        <ArrowRight size={18} />
-                                                    </>
-                                                )}
-                                            </button>
-                                        </motion.div>
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3.5 rounded-xl font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:shadow-sky-300 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                                >
+                                    {isLoading ? (
+                                        <Loader2 size={18} className="animate-spin" />
                                     ) : (
-                                        <motion.div
-                                            key="register"
-                                            variants={stepVariants}
-                                            initial="enter"
-                                            animate="center"
-                                            exit="exit"
-                                            className="space-y-4"
-                                        >
-                                            {currentStep === 1 && (
-                                                <motion.div
-                                                    key="step1"
-                                                    variants={fadeInUp}
-                                                    initial="initial"
-                                                    animate="animate"
-                                                    exit="exit"
-                                                    className="space-y-4"
-                                                >
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Tên đăng nhập <span className="text-rose-500">*</span>
-                                                            </label>
-                                                            <div className="relative">
-                                                                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                                <input
-                                                                    type="text"
-                                                                    name="username"
-                                                                    value={formData.username}
-                                                                    onChange={handleInputChange}
-                                                                    placeholder="nguyenvan_a"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Email <span className="text-rose-500">*</span>
-                                                            </label>
-                                                            <div className="relative">
-                                                                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                                <input
-                                                                    type="email"
-                                                                    name="email"
-                                                                    value={formData.email}
-                                                                    onChange={handleInputChange}
-                                                                    placeholder="your.email@dthu.edu.vn"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
-                                                                    required
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Mật khẩu <span className="text-rose-500">*</span>
-                                                            </label>
-                                                            <div className="relative">
-                                                                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                                <input
-                                                                    type={showPassword ? "text" : "password"}
-                                                                    name="password"
-                                                                    value={formData.password}
-                                                                    onChange={handleInputChange}
-                                                                    placeholder="••••••••"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-10 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
-                                                                    required
-                                                                    minLength={6}
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setShowPassword(!showPassword)}
-                                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-sky-600"
-                                                                >
-                                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                                </button>
-                                                            </div>
-                                                            <p className="text-xs text-gray-500 mt-1 ml-1">
-                                                                Ít nhất 6 ký tự
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-
-                                            {currentStep === 2 && (
-                                                <motion.div
-                                                    key="step2"
-                                                    variants={fadeInUp}
-                                                    initial="initial"
-                                                    animate="animate"
-                                                    exit="exit"
-                                                    className="space-y-4"
-                                                >
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Họ và tên
-                                                            </label>
-                                                            <div className="relative">
-                                                                <Heart size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                                <input
-                                                                    type="text"
-                                                                    name="full_name"
-                                                                    value={formData.full_name}
-                                                                    onChange={handleInputChange}
-                                                                    placeholder="Nguyễn Văn A"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div>
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Giới tính
-                                                            </label>
-                                                            <select
-                                                                name="gender"
-                                                                value={formData.gender}
-                                                                onChange={handleInputChange}
-                                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all"
-                                                            >
-                                                                <option value="" className="text-gray-400">Chọn</option>
-                                                                <option value="Nam">Nam</option>
-                                                                <option value="Nữ">Nữ</option>
-                                                                <option value="Khác">Khác</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <div>
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Ngày sinh
-                                                            </label>
-                                                            <div className="relative">
-                                                                <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                                                                <input
-                                                                    type="date"
-                                                                    name="date_of_birth"
-                                                                    value={formData.date_of_birth}
-                                                                    onChange={handleInputChange}
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all"
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Số điện thoại
-                                                            </label>
-                                                            <div className="relative">
-                                                                <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                                <input
-                                                                    type="tel"
-                                                                    name="phone"
-                                                                    value={formData.phone}
-                                                                    onChange={handleInputChange}
-                                                                    placeholder="0123 456 789"
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all placeholder-gray-400"
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="col-span-2">
-                                                            <label className="block text-xs font-semibold text-gray-700 uppercase mb-1 ml-1">
-                                                                Địa chỉ
-                                                            </label>
-                                                            <div className="relative">
-                                                                <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
-                                                                <textarea
-                                                                    name="address"
-                                                                    value={formData.address}
-                                                                    onChange={handleInputChange}
-                                                                    rows={1}
-                                                                    placeholder="Số nhà, đường, phường, thành phố..."
-                                                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 pl-9 pr-3 text-sm text-black font-medium focus:outline-none focus:ring-2 focus:ring-sky-100 focus:border-sky-600 focus:bg-white transition-all resize-none placeholder-gray-400"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="pt-2">
-                                                        <label className="flex items-start gap-2 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={agreeTerms}
-                                                                onChange={(e) => setAgreeTerms(e.target.checked)}
-                                                                className="mt-1 rounded border-gray-300 text-sky-600 focus:ring-sky-500"
-                                                            />
-                                                            <span className="text-xs text-gray-600 group-hover:text-gray-900 transition-colors">
-                                                                Tôi đồng ý với{' '}
-                                                                <button type="button" className="text-sky-600 hover:text-sky-800 font-medium">
-                                                                    Điều khoản sử dụng
-                                                                </button>
-                                                                {' '}và{' '}
-                                                                <button type="button" className="text-sky-600 hover:text-sky-800 font-medium">
-                                                                    Chính sách bảo mật
-                                                                </button>
-                                                            </span>
-                                                        </label>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-
-                                            {!isLoginMode && (
-                                                <div className="flex gap-3 pt-3 pb-2">
-                                                    {currentStep > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={prevStep}
-                                                            className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-gray-200 transition-all"
-                                                        >
-                                                            Quay lại
-                                                        </button>
-                                                    )}
-
-                                                    {currentStep < 2 ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={nextStep}
-                                                            className="flex-1 bg-gradient-to-r from-sky-600 to-indigo-600 text-white py-3 rounded-lg font-semibold text-sm shadow-lg shadow-sky-200 hover:shadow-xl hover:scale-[1.02] transition-all"
-                                                        >
-                                                            Tiếp theo
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            type="submit"
-                                                            disabled={isLoading || !agreeTerms}
-                                                            className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 rounded-lg font-semibold text-sm shadow-lg shadow-green-200 hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-70 flex items-center justify-center gap-2"
-                                                        >
-                                                            {isLoading ? (
-                                                                <Loader2 size={16} className="animate-spin" />
-                                                            ) : (
-                                                                <>
-                                                                    Hoàn tất đăng ký
-                                                                </>
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </motion.div>
+                                        <>Đăng Nhập <ArrowRight size={18} /></>
                                     )}
-                                </AnimatePresence>
+                                </button>
                             </form>
 
-                            {/* --- Khu Vực Các Tùy Chọn Dưới Cùng --- */}
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.2 }}
-                                className="mt-4 text-center"
+                                className="mt-6 text-center"
                             >
-                                <p className="text-sm text-gray-500 mb-2">
-                                    {isLoginMode ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
-                                    <button
-                                        type="button"
-                                        onClick={toggleMode}
-                                        className="font-semibold text-sky-600 hover:text-sky-800 hover:underline transition-all"
-                                    >
-                                        {isLoginMode ? "Đăng ký ngay" : "Đăng nhập"}
-                                    </button>
-                                </p>
+                                <div className="relative flex items-center py-3">
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                    <span className="flex-shrink-0 mx-4 text-xs text-gray-400 font-semibold tracking-wide">HOẶC</span>
+                                    <div className="flex-grow border-t border-gray-200"></div>
+                                </div>
 
-                                {/* Chặn điều kiện: Cụm 'Khách' chỉ hiện khi đang ở form Đăng nhập */}
-                                {isLoginMode && (
-                                    <>
-                                        <div className="relative flex items-center py-3">
-                                            <div className="flex-grow border-t border-gray-200"></div>
-                                            <span className="flex-shrink-0 mx-4 text-xs text-gray-400 font-semibold tracking-wide">HOẶC</span>
-                                            <div className="flex-grow border-t border-gray-200"></div>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleGuestLogin}
-                                            className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-semibold text-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                        >
-                                            Tiếp tục mà không cần đăng nhập
-                                            <ArrowRight size={16} className="opacity-70" />
-                                        </button>
-                                    </>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={handleGuestLogin}
+                                    className="w-full bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-semibold text-sm hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    Tiếp tục mà không cần đăng nhập
+                                    <ArrowRight size={16} className="opacity-70" />
+                                </button>
                             </motion.div>
-
                         </div>
                     </div>
                 </div>
@@ -675,30 +251,9 @@ export default function LoginPage() {
                     33% { transform: translate(30px, -50px) scale(1.1); }
                     66% { transform: translate(-20px, 20px) scale(0.9); }
                 }
-                .animate-blob {
-                    animation: blob 7s infinite;
-                }
-                .animation-delay-2000 {
-                    animation-delay: 2s;
-                }
-                .animation-delay-4000 {
-                    animation-delay: 4s;
-                }
-                
-                /* Ẩn thanh cuộn mặc định để giao diện không bị xấu khi màn hình thấp */
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background-color: #cbd5e1;
-                    border-radius: 20px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background-color: #94a3b8;
-                }
+                .animate-blob { animation: blob 7s infinite; }
+                .animation-delay-2000 { animation-delay: 2s; }
+                .animation-delay-4000 { animation-delay: 4s; }
             `}</style>
         </div>
     )

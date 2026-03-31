@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useOutletContext } from 'react-router-dom';
 import {
     Shield, Users, RotateCcw, ChevronDown, ChevronUp,
@@ -45,11 +45,7 @@ const AVATAR_COLORS = [
     'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-pink-500',
 ];
 
-const API = 'http://127.0.0.1:8000';
-
-function authHeaders() {
-    return { Authorization: `Bearer ${localStorage.getItem('access_token')}` };
-}
+const API = '';
 
 function getInitials(name?: string | null, username?: string) {
     const src = name || username || '?';
@@ -118,8 +114,8 @@ export default function PermissionsPage() {
         setLoading(true);
         try {
             const [fRes, uRes] = await Promise.all([
-                axios.get(`${API}/permissions/features`, { headers: authHeaders() }),
-                axios.get(`${API}/permissions/users`, { headers: authHeaders() }),
+                api.get(`${API}/permissions/features`),
+                api.get(`${API}/permissions/users`),
             ]);
             setFeatures(fRes.data);
             setUsers(uRes.data);
@@ -144,7 +140,7 @@ export default function PermissionsPage() {
     const saveUser = async (userId: number) => {
         setSaving(userId);
         try {
-            await axios.put(`${API}/permissions/users/${userId}`, { permissions: localPerms[userId] }, { headers: authHeaders() });
+            await api.put(`${API}/permissions/users/${userId}`, { permissions: localPerms[userId] });
             await load();
             showToast('Đã lưu phân quyền thành công');
             setExpandedId(null);
@@ -159,7 +155,7 @@ export default function PermissionsPage() {
         if (!confirm(`Reset quyền của "${username}" về mặc định theo role?`)) return;
         setSaving(userId);
         try {
-            await axios.delete(`${API}/permissions/users/${userId}`, { headers: authHeaders() });
+            await api.delete(`${API}/permissions/users/${userId}`);
             await load();
             showToast(`Đã reset quyền của ${username} về mặc định`);
         } catch {

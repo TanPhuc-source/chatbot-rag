@@ -3,13 +3,14 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/store/authStore';
 import {
     Upload, FileText, File as FileIcon, Trash2, RefreshCw,
     Search, CheckCircle, XCircle, Info, AlertTriangle,
     Eye, EyeOff, Download, Edit3, X, Plus
 } from 'lucide-react';
 
-const API = 'http://127.0.0.1:8000';
+const API = '';
 
 interface FormItem {
     id: number;
@@ -37,7 +38,7 @@ const FileTypeIcon = ({ type }: { type: string }) => {
 };
 
 export default function FormTemplatesTab() {
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
 
     const [forms, setForms] = useState<FormItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -72,8 +73,8 @@ export default function FormTemplatesTab() {
         setIsLoading(true);
         try {
             const res = await fetch(`${API}/forms?include_inactive=true`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không thể tải danh sách biểu mẫu');
             const data: FormItem[] = await res.json();
             setForms(data);
@@ -82,7 +83,7 @@ export default function FormTemplatesTab() {
         } finally {
             setIsLoading(false);
         }
-    }, [token, addToast]);
+    }, [isLoggedIn, addToast]);
 
     useEffect(() => { fetchForms(); }, [fetchForms]);
 
@@ -101,8 +102,8 @@ export default function FormTemplatesTab() {
             if (uploadDesc.trim()) formData.append('description', uploadDesc.trim());
 
             const res = await fetch(`${API}/forms/upload`, {
+                credentials: 'include',
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
                 body: formData,
             });
             if (!res.ok) {
@@ -128,9 +129,9 @@ export default function FormTemplatesTab() {
     const toggleActive = async (form: FormItem) => {
         try {
             const res = await fetch(`${API}/forms/${form.id}`, {
+                credentials: 'include',
                 method: 'PATCH',
                 headers: {
-                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ is_active: !form.is_active }),
@@ -157,9 +158,9 @@ export default function FormTemplatesTab() {
         setIsSaving(true);
         try {
             const res = await fetch(`${API}/forms/${editForm.id}`, {
+                credentials: 'include',
                 method: 'PATCH',
                 headers: {
-                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -185,8 +186,8 @@ export default function FormTemplatesTab() {
         setIsDeleting(true);
         try {
             const res = await fetch(`${API}/forms/${id}`, {
+                credentials: 'include',
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Không thể xóa');
             setForms(prev => prev.filter(f => f.id !== id));

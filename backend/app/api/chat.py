@@ -1,22 +1,10 @@
-"""
-Chat API Endpoints
-
-POST /chat        → full response (non-streaming)
-POST /chat/stream → SSE streaming
-
-Auth là tùy chọn — user chưa đăng nhập vẫn chat được,
-nhưng nếu có token thì lưu session vào DB gắn với user đó.
-"""
-from __future__ import annotations
-
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -25,18 +13,21 @@ from app.db import models
 from app.services.chat_service import chat, stream_chat
 from app.utils.logger import logger
 from app.api import schemas
-router = APIRouter()
 
-oauth2_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+from app.core.limiter import limiter
+
+router = APIRouter()
 
 
 def get_optional_user(
-    token: str | None = Depends(oauth2_optional),
+    request: Request,
     db: Session = Depends(get_db),
 ) -> models.User | None:
-    """Trả về User nếu có token hợp lệ, None nếu không có hoặc token lỗi."""
+    """Trả về User nếu có token cookie hợp lệ, None nếu không có hoặc token lỗi."""
+    token = request.cookies.get("access_token")
     if not token:
         return None
+        
     try:
         settings = get_settings()
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -51,7 +42,8 @@ def get_optional_user(
 # ── Schemas ────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    question: str
+    # GIỚI HẠN ĐỘ DÀI: Tối đa 2000 ký tự để chống spam và lãng phí token LLM
+    question: str = Field(..., min_length=1, max_length=2000, description="Câu hỏi của người dùng")
     conversation_id: Optional[str] = None
 
 
@@ -71,8 +63,10 @@ class ChatResponse(BaseModel):
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @router.post("", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def chat_endpoint(
-    body: ChatRequest,
+    request: Request, 
+    body: ChatRequest = Body(...),
     current_user: models.User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
@@ -90,8 +84,10 @@ async def chat_endpoint(
 
 
 @router.post("/stream")
+@limiter.limit("10/minute")
 async def stream_endpoint(
-    body: ChatRequest,
+    request: Request, 
+    body: ChatRequest = Body(...),
     current_user: models.User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
@@ -117,8 +113,11 @@ async def stream_endpoint(
         },
     )
 
-router.get("/sessions", response_model=list[schemas.ChatSessionResponse])
+
+@router.get("/sessions", response_model=list[schemas.ChatSessionResponse])
+@limiter.limit("20/minute")
 def get_user_sessions(
+    request: Request, 
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ):
@@ -132,8 +131,11 @@ def get_user_sessions(
                  .all()
     return sessions
 
+
 @router.get("/sessions/{session_id}/messages", response_model=list[schemas.ChatMessageResponse])
+@limiter.limit("20/minute")
 def get_session_messages(
+    request: Request,
     session_id: str,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db),
@@ -142,7 +144,6 @@ def get_session_messages(
     if not current_user:
         raise HTTPException(status_code=401, detail="Vui lòng đăng nhập")
         
-    # Xác thực session thuộc về user này
     session = db.query(models.ChatSession).filter(
         models.ChatSession.id == session_id,
         models.ChatSession.user_id == current_user.id
@@ -157,8 +158,11 @@ def get_session_messages(
                  .all()
     return messages
 
+
 @router.delete("/sessions/{session_id}")
+@limiter.limit("10/minute")
 def delete_session(
+    request: Request,
     session_id: str,
     current_user: models.User = Depends(get_optional_user),
     db: Session = Depends(get_db),

@@ -10,6 +10,7 @@ import {
     Eye, BookOpen, Hash, BookMarked, Download, Edit3
 } from 'lucide-react';
 import FormTemplatesTab from '@/pages/FormTemplatesTab';
+import { useAuthStore } from '@/store/authStore';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ const StatusBadge = ({ status }: { status: DocStatus }) => {
 
 export default function AdminRecordsPage() {
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
 
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
@@ -135,8 +136,8 @@ export default function AdminRecordsPage() {
 
     // --- Auth guard ---
     useEffect(() => {
-        if (!token) navigate('/login');
-    }, [token, navigate]);
+        if (!isLoggedIn) navigate('/login');
+    }, [isLoggedIn, navigate]);
 
     // --- Toast ---
     const addToast = useCallback((message: string, type: Toast['type'] = 'success') => {
@@ -147,12 +148,12 @@ export default function AdminRecordsPage() {
 
     // --- Fetch documents ---
     const fetchDocuments = useCallback(async () => {
-        if (!token) return;
+        if (!isLoggedIn) return;
         setIsLoadingDocs(true);
         try {
-            const res = await fetch('http://127.0.0.1:8000/admin/documents', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch('/admin/documents', {
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không thể tải danh sách tài liệu');
             const data = await res.json();
             const docs: DocumentItem[] = data.map((item: any) => ({
@@ -168,18 +169,18 @@ export default function AdminRecordsPage() {
         } finally {
             setIsLoadingDocs(false);
         }
-    }, [token, addToast]);
+    }, [isLoggedIn, addToast]);
 
     // --- Fetch stats ---
     const fetchStats = useCallback(async () => {
-        if (!token) return;
+        if (!isLoggedIn) return;
         try {
-            const res = await fetch('http://127.0.0.1:8000/upload/stats', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch('/upload/stats', {
+                credentials: 'include',
+                });
             if (res.ok) setStats(await res.json());
         } catch { /* stats optional */ }
-    }, [token]);
+    }, [isLoggedIn]);
 
     useEffect(() => {
         fetchDocuments();
@@ -193,9 +194,9 @@ export default function AdminRecordsPage() {
         setPreviewChunkPage(1);
         setIsLoadingPreview(true);
         try {
-            const res = await fetch(`http://127.0.0.1:8000/upload/${doc.id}/content`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(`/upload/${doc.id}/content`, {
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không tải được nội dung');
             const data: PreviewData = await res.json();
             setPreviewData(data);
@@ -205,7 +206,7 @@ export default function AdminRecordsPage() {
         } finally {
             setIsLoadingPreview(false);
         }
-    }, [token, addToast]);
+    }, [isLoggedIn, addToast]);
 
     // --- Pagination sync ---
     useEffect(() => { setCurrentPage(1); }, [searchTerm]);
@@ -261,8 +262,8 @@ export default function AdminRecordsPage() {
                 reject();
             };
 
-            xhr.open('POST', 'http://127.0.0.1:8000/upload', true);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.open('POST', '/upload', true);
+            xhr.withCredentials = true;
             xhr.send(formData);
         });
     };
@@ -276,9 +277,9 @@ export default function AdminRecordsPage() {
         setIsDeleting(true);
         try {
             // 1. Xóa trong PostgreSQL
-            const r1 = await fetch(`http://127.0.0.1:8000/admin/documents/${id}`, {
+            const r1 = await fetch(`/admin/documents/${id}`, {
+                credentials: 'include',
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (!r1.ok) {
                 const body = await r1.json().catch(() => ({}));
@@ -286,9 +287,8 @@ export default function AdminRecordsPage() {
             }
 
             // 2. Xóa trong ChromaDB (best-effort, không fail nếu không tìm thấy)
-            fetch(`http://127.0.0.1:8000/upload/${id}`, {
+            fetch(`/upload/${id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             }).catch(() => { });
 
             setDocuments(prev => prev.filter(d => d.id !== id));
@@ -309,14 +309,13 @@ export default function AdminRecordsPage() {
         let successCount = 0;
         for (const id of selectedIds) {
             try {
-                const r = await fetch(`http://127.0.0.1:8000/admin/documents/${id}`, {
+                const r = await fetch(`/admin/documents/${id}`, {
+                credentials: 'include',
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` },
                 });
                 if (r.ok) {
-                    fetch(`http://127.0.0.1:8000/upload/${id}`, {
+                    fetch(`/upload/${id}`, {
                         method: 'DELETE',
-                        headers: { Authorization: `Bearer ${token}` },
                     }).catch(() => { });
                     successCount++;
                 }
@@ -357,9 +356,9 @@ export default function AdminRecordsPage() {
     // --- Download original file ---
     const handleDownloadOriginal = async (doc: DocumentItem) => {
         try {
-            const res = await fetch(`http://127.0.0.1:8000/upload/${doc.id}/download`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await fetch(`/upload/${doc.id}/download`, {
+                credentials: 'include',
+                });
             if (!res.ok) {
                 const body = await res.json().catch(() => ({}));
                 addToast(body.detail || 'Không thể tải file gốc', 'error');
@@ -391,7 +390,7 @@ export default function AdminRecordsPage() {
         return pages;
     };
 
-    if (!token) return null;
+    if (!isLoggedIn) return null;
 
     return (
         <>
@@ -581,7 +580,7 @@ export default function AdminRecordsPage() {
                         <button onClick={fetchDocuments} className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" title="Làm mới">
                             <RefreshCw size={18} className={isLoadingDocs ? 'animate-spin' : ''} />
                         </button>
-                        <button onClick={() => { localStorage.removeItem('access_token'); navigate('/login'); }}
+                        <button onClick={() => { navigate('/login'); }}
                             className="text-sm flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors font-semibold">
                             Đăng xuất <LogOut size={16} />
                         </button>

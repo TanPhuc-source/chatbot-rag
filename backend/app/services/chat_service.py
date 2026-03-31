@@ -40,6 +40,11 @@ def _get_or_create_session(
 
 
 def _get_history_from_db(db: Session, session_id: int) -> list[dict]:
+    """
+    Lấy lịch sử hội thoại từ DB.
+    Lấy tối đa 20 messages gần nhất (10 turn) — prompts.py sẽ trim token budget.
+    Việc trim thực tế xảy ra trong trim_history_to_token_budget() khi build prompt.
+    """
     msgs = (
         db.query(models.ChatMessage)
         .filter(models.ChatMessage.session_id == session_id)

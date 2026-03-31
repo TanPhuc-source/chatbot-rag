@@ -142,6 +142,93 @@ def _format_context(chunks: list[RetrievedChunk]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
+# ── Token budget management ────────────────────────────────────────────────
+
+# Ước tính token: 1 token ≈ 3.5 ký tự tiếng Việt (có dấu), 4 ký tự tiếng Anh
+# Dùng 3.5 để an toàn hơn (ước tính cao hơn thực tế một chút)
+_CHARS_PER_TOKEN = 3.5
+
+# Groq llama-3.3-70b context = 128k token
+# Dành cho: system + context + question + answer + buffer
+# History chỉ được dùng phần còn lại sau khi trừ các phần cố định
+HISTORY_TOKEN_BUDGET = 3000   # ~10,500 ký tự — đủ cho ~6-8 turn bình thường
+MAX_HISTORY_TURNS = 10         # Hard cap số turn dù token vẫn còn
+
+
+def _estimate_tokens(text: str) -> int:
+    """Ước tính số token của một đoạn text."""
+    return max(1, int(len(text) / _CHARS_PER_TOKEN))
+
+
+def _message_tokens(msg: dict) -> int:
+    """Ước tính token của 1 message dict (role + content)."""
+    return _estimate_tokens(msg.get("content", "")) + 4  # 4 token overhead/message
+
+
+def trim_history_to_token_budget(
+    history: list[dict],
+    token_budget: int = HISTORY_TOKEN_BUDGET,
+    max_turns: int = MAX_HISTORY_TURNS,
+) -> list[dict]:
+    """
+    Cắt history để tổng token không vượt quá budget.
+
+    Chiến lược:
+    - Luôn giữ nguyên cặp [user, assistant] — không bao giờ để lửng
+    - Ưu tiên các turn GẦN NHẤT (quan trọng hơn cho context)
+    - Nếu ngay cả 1 turn cũng vượt budget → bỏ hẳn history (tránh lỗi)
+
+    Args:
+        history: list[{"role": "user"|"assistant", "content": str}]
+        token_budget: số token tối đa cho toàn bộ history
+        max_turns: số lượng cặp turn tối đa (bất kể token)
+
+    Returns:
+        history đã trim, luôn là số lượng message chẵn (cặp user+assistant)
+    """
+    if not history:
+        return []
+
+    # Gom thành cặp [user, assistant] từ cuối lên đầu
+    # Đảm bảo chỉ lấy các cặp hoàn chỉnh
+    pairs: list[tuple[dict, dict]] = []
+    i = len(history) - 1
+    while i >= 1:
+        if history[i]["role"] == "assistant" and history[i - 1]["role"] == "user":
+            pairs.append((history[i - 1], history[i]))
+            i -= 2
+        else:
+            i -= 1  # Bỏ qua message lẻ không thành cặp
+
+    # pairs hiện tại: [turn_mới_nhất, ..., turn_cũ_nhất]
+    # Chọn từ mới nhất vào, kiểm tra token
+    selected: list[tuple[dict, dict]] = []
+    used_tokens = 0
+
+    for user_msg, asst_msg in pairs:
+        turn_tokens = _message_tokens(user_msg) + _message_tokens(asst_msg)
+        if used_tokens + turn_tokens > token_budget:
+            break
+        if len(selected) >= max_turns:
+            break
+        selected.append((user_msg, asst_msg))
+        used_tokens += turn_tokens
+
+    if not selected:
+        return []
+
+    # Đảo lại để chronological order (cũ → mới)
+    selected.reverse()
+
+    # Flatten về list[dict]
+    result = []
+    for user_msg, asst_msg in selected:
+        result.append(user_msg)
+        result.append(asst_msg)
+
+    return result
+
+
 # ── Prompt builders ────────────────────────────────────────────────────────
 
 def build_qa_prompt(
@@ -176,7 +263,8 @@ def build_qa_prompt(
 
     messages = [{"role": "system", "content": system}]
     if history:
-        messages.extend(history[-6:])
+        trimmed = trim_history_to_token_budget(history)
+        messages.extend(trimmed)
     messages.append({
         "role": "user",
         "content": f"Tài liệu tham khảo:\n\n{context}\n\n---\n\nCâu hỏi: {question}",

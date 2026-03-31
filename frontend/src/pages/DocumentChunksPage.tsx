@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
     ArrowLeft, Menu, RefreshCw, Edit3, Trash2, Scissors, Combine,
     Save, X, ChevronDown, ChevronUp, FileText, Hash, BookOpen,
@@ -23,7 +24,7 @@ interface Toast {
     type: 'success' | 'error' | 'info';
 }
 
-const API = 'http://127.0.0.1:8000';
+const API = '';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
@@ -292,7 +293,7 @@ function ChunkCard({
 export default function DocumentChunksPage() {
     const { documentId } = useParams<{ documentId: string }>();
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
         setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -328,12 +329,12 @@ export default function DocumentChunksPage() {
     }, []);
 
     const fetchChunks = useCallback(async () => {
-        if (!token || !documentId) return;
+        if (!isLoggedIn || !documentId) return;
         setIsLoading(true);
         try {
             const res = await fetch(`${API}/upload/${documentId}/content`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không thể tải danh sách chunks');
             const data = await res.json();
             setChunks(data.chunks);
@@ -342,7 +343,7 @@ export default function DocumentChunksPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [token, documentId, addToast]);
+    }, [isLoggedIn, documentId, addToast]);
 
     useEffect(() => { fetchChunks(); }, [fetchChunks]);
 
@@ -352,8 +353,9 @@ export default function DocumentChunksPage() {
         setSaving(true);
         try {
             const res = await fetch(`${API}/upload/${documentId}/chunks/${chunkId}`, {
+                credentials: 'include',
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: editText }),
             });
             if (!res.ok) throw new Error('Lưu thất bại');
@@ -373,8 +375,8 @@ export default function DocumentChunksPage() {
         setDeleting(true);
         try {
             const res = await fetch(`${API}/upload/${documentId}/chunks/${deleteId}`, {
+                credentials: 'include',
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Xóa thất bại');
             setChunks(prev => prev.filter(c => c.chunk_id !== deleteId));
@@ -393,8 +395,9 @@ export default function DocumentChunksPage() {
         setSplitting(true);
         try {
             const res = await fetch(`${API}/upload/${documentId}/chunks/split`, {
+                credentials: 'include',
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chunk_id: splitChunk.chunk_id, split_at: splitAt }),
             });
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || 'Tách thất bại'); }
@@ -428,8 +431,9 @@ export default function DocumentChunksPage() {
         setMerging(true);
         try {
             const res = await fetch(`${API}/upload/${documentId}/chunks/merge`, {
+                credentials: 'include',
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chunk_id_a: mergeSelected[0], chunk_id_b: mergeSelected[1] }),
             });
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || 'Gộp thất bại'); }
@@ -463,7 +467,7 @@ export default function DocumentChunksPage() {
         search === '' || c.text.toLowerCase().includes(search.toLowerCase())
     );
 
-    if (!token) return null;
+    if (!isLoggedIn) return null;
 
     return (
         <>

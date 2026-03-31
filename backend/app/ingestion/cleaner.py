@@ -133,12 +133,45 @@ def _is_garbage_chunk(text: str) -> bool:
     return False
 
 
+# ── Digital signature & URL patterns ──────────────────────────────────────
+
+# Chuỗi chữ ký số xuất hiện trong PDF ký điện tử (DThU, văn bản nhà nước)
+# Dạng: startSignXXX... hoặc chuỗi base64 dài liên tục
+_DIGITAL_SIG_RE = re.compile(
+    r"startSign\S+",                        # chuỗi bắt đầu bằng startSign
+    re.IGNORECASE,
+)
+
+# URL xác thực chữ ký (thường rất dài, không có giá trị semantic)
+_VERIFY_URL_RE = re.compile(
+    r"https?://\S{60,}",                    # URL dài hơn 60 ký tự liên tục
+)
+
+# Chuỗi base64 / hex dài liên tục (không phải nội dung người đọc)
+# Ví dụ: ODSScPGUU0GYigS4L3vNvLBbGrDkIGUyxbaSl6EHmThJRwv/QG5kx27...
+_BASE64_BLOB_RE = re.compile(
+    r"[A-Za-z0-9+/]{80,}={0,2}",           # chuỗi base64 >= 80 ký tự liên tục
+)
+
+
+def _remove_digital_signatures(text: str) -> str:
+    """
+    Xóa chuỗi chữ ký số điện tử và URL xác thực dài khỏi text.
+    Phổ biến trong PDF văn bản nhà nước Việt Nam ký bằng USB token / DThU.
+    """
+    text = _DIGITAL_SIG_RE.sub("", text)
+    text = _VERIFY_URL_RE.sub("", text)
+    text = _BASE64_BLOB_RE.sub("", text)
+    return text
+
+
 def clean_text(text: str) -> str:
     """
     Áp dụng toàn bộ bước làm sạch cho 1 chuỗi text.
     Dùng được độc lập (ví dụ: test unit).
     """
     text = _remove_garbage_unicode(text)
+    text = _remove_digital_signatures(text)   # xóa chữ ký số, URL dài, base64
     text = _remove_repeated_headers(text)
     text = _normalize_whitespace(text)
     return text

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import { useOutletContext } from 'react-router-dom';
+import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 import {
     Search, Plus, Edit, Lock, Unlock,
     Shield, CheckCircle, UserX, X,
     Mail, Eye, Calendar,
     ChevronLeft, ChevronRight,
-    Menu, MapPin, Phone, User, RefreshCw, UserCheck
+    Menu, MapPin, Phone, User, RefreshCw, UserCheck, KeyRound
 } from 'lucide-react';
 
 interface UserData {
@@ -43,7 +45,7 @@ function Avatar({ user, size = 'md' }: { user: UserData; size?: 'sm' | 'md' | 'l
     if (user.avatar_url) {
         return (
             <img
-                src={`http://127.0.0.1:8000${user.avatar_url}`}
+                src={`${user.avatar_url}`}
                 alt={user.full_name || user.username}
                 className={`${sz} rounded-full object-cover shrink-0`}
             />
@@ -116,8 +118,8 @@ const inputCls = "w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate
 const PAGE_SIZE = 8;
 
 export default function AccountManagementPage() {
-    const token = localStorage.getItem('access_token');
-    const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+    const { username: currentUsername } = useAuthStore();
+    const cookieReady = useAuthStore((s) => s.cookieReady);
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useOutletContext<{
         isMobileMenuOpen: boolean;
         setIsMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -135,21 +137,14 @@ export default function AccountManagementPage() {
     const [editingUser, setEditingUser] = useState<UserData | null>(null);
     const [viewingUser, setViewingUser] = useState<UserData | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const api = axios.create({
-        baseURL: 'http://127.0.0.1:8000',
-        headers: { Authorization: `Bearer ${token}` },
-    });
+    const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+    const [resetPasswordUser, setResetPasswordUser] = useState<UserData | null>(null);
+    const [resetPasswordValue, setResetPasswordValue] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
 
     useEffect(() => {
-        if (token) {
-            fetchData();
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                setCurrentUsername(payload.sub);
-            } catch { }
-        }
-    }, [token]);
+        if (cookieReady) fetchData();
+    }, [cookieReady]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -187,6 +182,28 @@ export default function AccountManagementPage() {
             await api.patch(`/admin/users/${user.id}/toggle-status`);
             fetchData();
         } catch { alert('Lỗi khi thay đổi trạng thái!'); }
+    };
+
+    const handleResetPassword = async () => {
+        if (!resetPasswordUser || !resetPasswordValue.trim()) return;
+        if (resetPasswordValue.trim().length < 6) {
+            alert('Mật khẩu phải có ít nhất 6 ký tự!');
+            return;
+        }
+        setIsResetting(true);
+        try {
+            await api.patch(`/admin/users/${resetPasswordUser.id}/reset-password`, {
+                new_password: resetPasswordValue.trim()
+            });
+            alert(`✅ Đã đặt lại mật khẩu cho @${resetPasswordUser.username} thành công!`);
+            setIsResetPasswordModalOpen(false);
+            setResetPasswordUser(null);
+            setResetPasswordValue('');
+        } catch {
+            alert('❌ Lỗi khi đặt lại mật khẩu. Vui lòng thử lại!');
+        } finally {
+            setIsResetting(false);
+        }
     };
 
     const handleUpsertSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -297,7 +314,6 @@ export default function AccountManagementPage() {
                                 <option value="all">Tất cả vai trò</option>
                                 <option value="admin">Admin</option>
                                 <option value="staff">Nhân viên</option>
-                                <option value="user">User</option>
                             </select>
                             <select
                                 value={filterStatus}
@@ -403,6 +419,14 @@ export default function AccountManagementPage() {
                                                                     }`}
                                                                 title={u.is_active ? 'Khóa tài khoản' : 'Mở khóa'}>
                                                                 {u.is_active ? <Lock size={15} /> : <Unlock size={15} />}
+                                                            </button>
+                                                        )}
+                                                        {u.username !== currentUsername && (
+                                                            <button
+                                                                onClick={() => { setResetPasswordUser(u); setResetPasswordValue(''); setIsResetPasswordModalOpen(true); }}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 dark:hover:text-violet-400 transition-colors"
+                                                                title="Đặt lại mật khẩu">
+                                                                <KeyRound size={15} />
                                                             </button>
                                                         )}
                                                     </div>
@@ -580,13 +604,12 @@ export default function AccountManagementPage() {
                                                     </div>
                                                 </FormField>
                                             )}
-                                            <FormField label="Vai trò" required>
-                                                <select name="role" defaultValue={editingUser?.role || 'user'} className={inputCls}>
-                                                    <option value="admin">Admin – Quản trị viên</option>
-                                                    <option value="staff">Nhân viên – Quản lý nội dung</option>
-                                                    <option value="user">User – Người dùng</option>
-                                                </select>
-                                            </FormField>
+                                                            <FormField label="Vai trò" required>
+                                                                <select name="role" defaultValue={editingUser?.role || 'staff'} className={inputCls}>
+                                                                    <option value="admin">Admin – Quản trị viên</option>
+                                                                    <option value="staff">Nhân viên – Quản lý nội dung</option>
+                                                                </select>
+                                                            </FormField>
                                         </div>
                                     </div>
 
@@ -651,6 +674,71 @@ export default function AccountManagementPage() {
                                     </button>
                                 </div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Modal: Reset Password ── */}
+            <AnimatePresence>
+                {isResetPasswordModalOpen && resetPasswordUser && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+                            transition={{ duration: 0.18 }}
+                            className="bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/60">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                                        <KeyRound size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100">Đặt lại mật khẩu</h3>
+                                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">@{resetPasswordUser.username}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsResetPasswordModalOpen(false)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <div className="px-6 py-5 space-y-4">
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    Nhập mật khẩu mới cho nhân viên <span className="font-semibold text-slate-700 dark:text-slate-200">{resetPasswordUser.full_name || resetPasswordUser.username}</span>.
+                                </p>
+                                <div className="relative">
+                                    <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="password"
+                                        value={resetPasswordValue}
+                                        onChange={e => setResetPasswordValue(e.target.value)}
+                                        placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+                                        className={`${inputCls} pl-9`}
+                                        minLength={6}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/50">
+                                <button
+                                    onClick={() => setIsResetPasswordModalOpen(false)}
+                                    className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleResetPassword}
+                                    disabled={isResetting || !resetPasswordValue.trim()}
+                                    className="px-6 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-sm disabled:opacity-70 transition-all active:scale-95 flex items-center gap-2">
+                                    {isResetting ? (
+                                        <><RefreshCw size={14} className="animate-spin" /> Đang xử lý...</>
+                                    ) : (
+                                        <><KeyRound size={14} /> Đặt lại mật khẩu</>
+                                    )}
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}

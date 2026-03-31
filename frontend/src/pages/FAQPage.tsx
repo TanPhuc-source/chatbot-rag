@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
     Plus, Trash2, RefreshCw, Search, Menu, LogOut, Edit2,
     X, ChevronLeft, ChevronRight, HelpCircle, CheckCircle,
@@ -19,7 +20,7 @@ interface FAQ {
 }
 interface Toast { id: string; message: string; type: 'success' | 'error' | 'info'; }
 
-const API = 'http://127.0.0.1:8000';
+const API = '';
 
 const CATEGORY_COLORS = [
     { bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-700 dark:text-violet-400', dot: 'bg-violet-500 dark:bg-violet-400' },
@@ -45,7 +46,7 @@ function getCategoryColor(category: string | null, allCategories: string[]) {
 
 export default function FAQPage() {
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
     const { setIsMobileMenuOpen } = useOutletContext<any>();
 
     const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -65,7 +66,7 @@ export default function FAQPage() {
     const [newCategoryInput, setNewCategoryInput] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => { if (!token) navigate('/login'); }, [token]);
+    useEffect(() => { if (!isLoggedIn) navigate('/login'); }, [isLoggedIn]);
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
@@ -84,12 +85,13 @@ export default function FAQPage() {
     const fetchFaqs = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch(`${API}/faq/admin`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/faq/admin`, {
+                credentials: 'include', });
             if (!res.ok) throw new Error('Không thể tải FAQ');
             setFaqs(await res.json());
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsLoading(false); }
-    }, [token]);
+    }, [isLoggedIn]);
 
     useEffect(() => { fetchFaqs(); }, [fetchFaqs]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm, activeCategory]);
@@ -115,8 +117,9 @@ export default function FAQPage() {
         try {
             const url = editFaq ? `${API}/faq/admin/${editFaq.id}` : `${API}/faq/admin`;
             const res = await fetch(url, {
+                credentials: 'include',
                 method: editFaq ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...form, category: form.category.trim() || null }),
             });
             if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail || 'Lỗi'); }
@@ -130,7 +133,8 @@ export default function FAQPage() {
 
     const handleDelete = async (id: number) => {
         try {
-            const res = await fetch(`${API}/faq/admin/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/faq/admin/${id}`, {
+                credentials: 'include', method: 'DELETE' });
             if (!res.ok) throw new Error('Xóa thất bại');
             setFaqs(prev => {
                 const next = prev.filter(f => f.id !== id);
@@ -146,7 +150,8 @@ export default function FAQPage() {
 
     const handleToggle = async (id: number) => {
         try {
-            const res = await fetch(`${API}/faq/admin/${id}/toggle`, { method: 'PATCH', headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/faq/admin/${id}/toggle`, {
+                credentials: 'include', method: 'PATCH' });
             if (!res.ok) throw new Error('Lỗi');
             const updated: FAQ = await res.json();
             setFaqs(prev => prev.map(f => f.id === id ? updated : f));
@@ -385,7 +390,7 @@ export default function FAQPage() {
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-sm shadow-blue-200 dark:shadow-none">
                             <Plus size={14} /> Thêm FAQ
                         </button>
-                        <button onClick={() => { localStorage.removeItem('access_token'); navigate('/login'); }}
+                        <button onClick={() => { navigate('/login'); }}
                             className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-colors">
                             <LogOut size={16} />
                         </button>

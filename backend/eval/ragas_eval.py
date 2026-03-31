@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 eval/ragas_eval.py
 Chạy đánh giá RAG pipeline bằng RAGAS framework.

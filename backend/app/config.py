@@ -18,15 +18,15 @@ class Settings(BaseSettings):
 
     # OpenAI
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"          # hoặc gpt-4o, o1-mini, ...
+    OPENAI_MODEL: str = "gpt-4o-mini"          
 
     # Gemini
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.0-flash"     # hoặc gemini-1.5-pro, ...
+    GEMINI_MODEL: str = "gemini-2.0-flash"     
 
     # ── Embedding Provider ────────────────────────────────────
     EMBEDDING_PROVIDER: Literal["local"] = "local"
-    EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"
+    EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
     # ── Vector DB ─────────────────────────────────────────────
     CHROMA_HOST: str = "localhost"
@@ -36,10 +36,14 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/rag_edu"
 
-    # ── Auth ──────────────────────────────────────────────────
-    SECRET_KEY: str = "dev-secret-change-in-production"
+    # ── Auth & Security ───────────────────────────────────────
+    SECRET_KEY: str = Field(..., description="Khóa bảo mật JWT")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # ── Email / SMTP ──────────────────────────────────────────
+    SMTP_SENDER_EMAIL: str = Field(..., description="Email dùng để gửi thông báo")
+    SMTP_SENDER_PASSWORD: str = Field(..., description="App Password của email")
 
     # ── App ───────────────────────────────────────────────────
     APP_ENV: Literal["development", "production"] = "development"
@@ -68,6 +72,14 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     CONTEXTUAL_HEADERS_MAX_CHUNKS: int = 200
 
+    # ── App ───────────────────────────────────────────────────
+    APP_ENV: Literal["development", "production"] = "development"
+    FRONTEND_URL: str = Field(
+        default="http://localhost:3000", 
+        description="URL của Frontend khi chạy Production (VD: https://chat.dthu.edu.vn)"
+    )
+    LOG_LEVEL: str = "DEBUG"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -75,5 +87,4 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Singleton settings — gọi get_settings() ở bất kỳ đâu."""
     return Settings()

@@ -7,6 +7,7 @@ import {
     MessageSquare, Bot, User, Filter, CheckCircle, XCircle, Info,
     Trash2, AlertTriangle, BookOpen, Sparkles, Layers
 } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
 
 interface FeedbackItem {
     id: number;
@@ -28,7 +29,7 @@ interface NoFeedbackItem {
 }
 interface Toast { id: string; message: string; type: 'success' | 'error' | 'info'; }
 
-const API = 'http://127.0.0.1:8000';
+const API = '';
 
 const CATEGORY_COLORS = [
     { dot: 'bg-violet-500', text: 'text-violet-700 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/30' },
@@ -48,7 +49,7 @@ function getCatColor(cat: string, allCats: string[]) {
 
 export default function FeedbackPage() {
     const navigate = useNavigate();
-    const token = localStorage.getItem('access_token');
+    const { isLoggedIn, cookieReady } = useAuthStore();
     const { setIsMobileMenuOpen } = useOutletContext<any>();
 
     const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -91,7 +92,7 @@ export default function FeedbackPage() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    useEffect(() => { if (!token) navigate('/login'); }, [token]);
+    useEffect(() => { if (!isLoggedIn) navigate('/login'); }, [isLoggedIn]);
 
     const addToast = useCallback((message: string, type: Toast['type'] = 'success') => {
         const id = Math.random().toString(36).slice(2, 9);
@@ -103,13 +104,14 @@ export default function FeedbackPage() {
         setIsLoading(true);
         try {
             const params = filterRating !== 'all' ? `?rating=${filterRating}` : '';
-            const res = await fetch(`${API}/feedback${params}`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/feedback${params}`, {
+                credentials: 'include', });
             if (!res.ok) throw new Error('Không thể tải feedback');
             setItems(await res.json());
             setSelectedIds([]);
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsLoading(false); }
-    }, [token, filterRating]);
+    }, [isLoggedIn, filterRating]);
 
     useEffect(() => { fetchFeedback(); }, [fetchFeedback]);
     useEffect(() => { setCurrentPage(1); }, [searchTerm, filterRating]);
@@ -118,14 +120,14 @@ export default function FeedbackPage() {
         setIsLoadingNoFb(true);
         try {
             const res = await fetch(`${API}/analytics/no-feedback?limit=100&days=30`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+                credentials: 'include',
+                });
             if (!res.ok) throw new Error('Không thể tải dữ liệu');
             setNoFbItems(await res.json());
             setNoFbPage(1);
         } catch (e: any) { addToast(e.message, 'error'); }
         finally { setIsLoadingNoFb(false); }
-    }, [token, addToast]);
+    }, [isLoggedIn, addToast]);
 
     // Fetch khi chuyển tab hoặc lần đầu load (để badge count đúng ngay)
     useEffect(() => {
@@ -140,8 +142,8 @@ export default function FeedbackPage() {
         setIsDeleting(true);
         try {
             const res = await fetch(`${API}/feedback/${id}`, {
+                credentials: 'include',
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Xóa thất bại');
             setItems(prev => prev.filter(i => i.id !== id));
@@ -156,8 +158,9 @@ export default function FeedbackPage() {
         setIsDeleting(true);
         try {
             const res = await fetch(`${API}/feedback`, {
+                credentials: 'include',
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(selectedIds),
             });
             if (!res.ok) throw new Error('Xóa thất bại');
@@ -180,7 +183,8 @@ export default function FeedbackPage() {
         setFaqModal({ question: item.question || '', answer: item.answer || '' });
         // Fetch existing categories from FAQ list
         try {
-            const res = await fetch(`${API}/faq/admin`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API}/faq/admin`, {
+                credentials: 'include', });
             if (res.ok) {
                 const data = await res.json();
                 const cats = Array.from(new Set(data.map((f: any) => f.category).filter(Boolean) as string[])).sort() as string[];
@@ -195,8 +199,9 @@ export default function FeedbackPage() {
         setIsSavingFaq(true);
         try {
             const res = await fetch(`${API}/faq/admin`, {
+                credentials: 'include',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     question: faqForm.question.trim(),
                     answer: faqForm.answer.trim(),
@@ -583,7 +588,7 @@ export default function FeedbackPage() {
                             className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                             <RefreshCw size={18} className={(isLoading || isLoadingNoFb) ? 'animate-spin' : ''} />
                         </button>
-                        <button onClick={() => { localStorage.removeItem('access_token'); navigate('/login'); }}
+                        <button onClick={() => { navigate('/login'); }}
                             className="text-sm flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 font-semibold transition-colors">Đăng xuất <LogOut size={16} /></button>
                     </div>
                 </header>

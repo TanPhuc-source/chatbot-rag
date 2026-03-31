@@ -3,9 +3,10 @@ Admin API — quản lý tài liệu và users
 GET    /admin/documents
 DELETE /admin/documents/{id}
 GET    /admin/users
+POST   /admin/users
 PATCH  /admin/users/{id}
-PATCH  /admin/users/{id}/role
 PATCH  /admin/users/{id}/toggle-status
+PATCH  /admin/users/{id}/reset-password
 """
 from __future__ import annotations
 
@@ -23,6 +24,12 @@ from app.api.auth import UserResponse, hash_password
 from app.core.db_dependencies import get_admin_user, get_staff_user
 
 router = APIRouter()
+
+
+@router.get("", include_in_schema=False)
+@router.get("/", include_in_schema=False)
+def admin_root():
+    return {"detail": "Admin API"}
 
 
 # ── Schemas ────────────────────────────────────────────────────────────────
@@ -59,6 +66,9 @@ class AdminUserCreate(BaseModel):
     date_of_birth: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
+
+class AdminResetPassword(BaseModel):
+    new_password: str
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
@@ -195,3 +205,25 @@ def create_user_by_admin(
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+@router.patch("/users/{user_id}/reset-password")
+def reset_user_password_by_admin(
+    user_id: int,
+    body: AdminResetPassword,
+    current_user: models.User = Depends(get_admin_user),
+    db: Session = Depends(get_db),
+):
+    if len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Mật khẩu phải có ít nhất 6 ký tự")
+
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tài khoản")
+
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Dùng trang hồ sơ để đổi mật khẩu của chính bạn")
+
+    user.hashed_password = hash_password(body.new_password)
+    db.commit()
+    return {"message": f"Đã đặt lại mật khẩu cho {user.username} thành công"}
