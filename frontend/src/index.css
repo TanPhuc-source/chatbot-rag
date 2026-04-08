@@ -138,3 +138,25 @@ aside { transition: width 0.25s cubic-bezier(0.4,0,0.2,1); }
 
 /* Send button */
 button[disabled] { transition: all 0.2s ease !important; }
+
+/* ── System dark mode (theo cài đặt máy cá nhân) ── */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg-base:#07101c;--bg-1:#0d1a28;--bg-2:#122030;--bg-3:#182840;--bg-4:#1e3050;
+    --border:rgba(60,110,190,0.14);--border-mid:rgba(60,110,190,0.26);--border-strong:rgba(60,110,190,0.42);
+    --text-primary:#ddeaf8;--text-secondary:#7aa0c0;--text-muted:#3a5575;
+    --brand:#3b82f6;--brand-2:#60a5fa;--brand-hover:#2563eb;--brand-light:#182840;--brand-glow:rgba(59,130,246,0.22);
+    --success:#34d399;--shadow-sm:0 1px 4px rgba(0,0,0,0.28);--shadow-md:0 4px 16px rgba(0,0,0,0.38);
+    --shadow-brand:0 4px 20px rgba(59,130,246,0.28);--scrollbar-thumb:rgba(60,110,190,0.22);
+    --sb-bg:#060d18;--sb-border:rgba(255,255,255,0.065);--sb-title:#c0d4ee;
+    --sb-sub:rgba(192,212,238,0.42);--sb-text:#b0c8e8;--sb-muted:rgba(192,212,238,0.45);
+    --sb-icon:rgba(192,212,238,0.45);--sb-hover:rgba(255,255,255,0.05);
+    --sb-active-bg:rgba(59,130,246,0.20);--sb-active-border:rgba(59,130,246,0.28);
+    --sb-active-text:#93c5fd;--sb-active-icon:#60a5fa;--sb-btn-bg:rgba(59,130,246,0.12);
+    --sb-btn-border:rgba(59,130,246,0.28);--sb-btn-text:#93c5fd;--sb-badge-bg:rgba(255,255,255,0.06);
+    --sb-badge-border:rgba(255,255,255,0.10);--sb-badge-text:rgba(192,212,238,0.60);
+    --sb-avatar-bg:rgba(255,255,255,0.06);--sb-avatar-border:rgba(255,255,255,0.09);
+    --sb-trash:rgba(192,212,238,0.32);--sb-login-bg:rgba(59,130,246,0.12);--sb-login-border:rgba(59,130,246,0.28);
+    --sb-login-text:#93c5fd;--sb-user-hover:rgba(255,255,255,0.05);--sb-logout:rgba(192,212,238,0.40);
+  }
+}

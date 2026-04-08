@@ -80,9 +80,14 @@ export default function ProfilePage() {
         if (!file) return;
 
         setIsUploading(true);
-        // Hiển thị tạm ảnh vừa chọn (Optimistic UI)
-        const tempUrl = URL.createObjectURL(file);
-        setProfile(prev => prev ? { ...prev, avatar_url: tempUrl } : null);
+
+        // Dùng base64 (data: URL) thay vì blob: URL để tránh lỗi CSP
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            setProfile(prev => prev ? { ...prev, avatar_url: dataUrl } : null);
+        };
+        reader.readAsDataURL(file);
 
         const formData = new FormData();
         formData.append('file', file);
@@ -93,7 +98,9 @@ export default function ProfilePage() {
             setProfile(prev => prev ? { ...prev, avatar_url: res.data.avatar_url } : null);
             showToast('success', 'Đã cập nhật ảnh đại diện!');
         } catch (err) {
-            showToast('error', 'Lỗi khi tải ảnh lên. Vui lòng thử lại!');
+            const errMsg = (err as any)?.response?.data?.detail || "Lỗi khi tải ảnh lên. Vui lòng thử lại!";
+            console.error("[AVATAR] error detail:", (err as any)?.response?.data);
+            showToast("error", errMsg);
         } finally {
             setIsUploading(false);
         }
@@ -113,9 +120,9 @@ export default function ProfilePage() {
     const getAvatarSrc = () => {
         const url = profile?.avatar_url;
         if (!url) return fallbackAvatar;
-        // Nếu là blob (ảnh preview tạm) thì dùng luôn
-        if (url.startsWith('blob:')) return url;
-        // Nếu là link backend
+        // Nếu là data: URL (preview base64 tạm) hoặc https thì dùng luôn
+        if (url.startsWith('data:') || url.startsWith('https')) return url;
+        // Nếu là link backend tương đối
         return `${url}`;
     };
 
@@ -148,56 +155,56 @@ export default function ProfilePage() {
                 <div className="p-4 lg:p-8 max-w-6xl mx-auto w-full">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                        {/* CỘT TRÁI: CARD AVATAR & INFO */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden sticky top-24 transition-colors">
-                                <div className="h-28 bg-gradient-to-br from-blue-600 to-indigo-700"></div>
-
-                                <div className="px-6 pb-6 text-center relative">
-                                    {/* Khung Avatar */}
-                                    <div className="relative w-36 h-36 mx-auto -mt-18 rounded-full border-4 border-white dark:border-[#1a1a1a] shadow-lg bg-white dark:bg-[#1a1a1a] group mb-4 transition-colors">
-                                        <img
-                                            src={getAvatarSrc()}
-                                            alt="Avatar"
-                                            className="w-full h-full rounded-full object-cover"
-                                        />
-
-                                        {/* Hiệu ứng loading khi upload */}
-                                        {isUploading && (
-                                            <div className="absolute inset-0 bg-white/70 dark:bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm z-10 transition-colors">
-                                                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                            </div>
-                                        )}
-
-                                        {/* Nút Upload ẩn hiện khi hover */}
-                                        <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
-                                            <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={isUploading} />
-                                            <Camera size={28} className="text-white mb-1" />
-                                            <span className="text-white text-xs font-bold uppercase tracking-wider">Đổi ảnh</span>
-                                        </label>
+                {/* CỘT TRÁI: CARD AVATAR & INFO */}
+                <div className="lg:col-span-1">
+                    <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden sticky top-24 transition-colors">
+                        
+                        {/* Div màu xanh */}
+                        <div className="h-28 bg-gradient-to-br from-blue-600 to-indigo-700"></div>
+                        
+                        {/* Div màu trắng (Nội dung) */}
+                        <div className="px-6 pb-6 text-center relative">
+                            
+                            {/* Thay thế -mt-18 bằng -mt-[72px] ở dòng dưới đây */}
+                            <div className="relative w-36 h-36 mx-auto -mt-[72px] rounded-full border-4 border-white dark:border-[#1a1a1a] shadow-lg bg-white dark:bg-[#1a1a1a] group mb-4 transition-colors">
+                                <img src={getAvatarSrc()} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                                
+                                {isUploading && (
+                                    <div className="absolute inset-0 bg-white/70 dark:bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm z-10 transition-colors">
+                                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                                     </div>
+                                )}
+                                
+                                <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
+                                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={isUploading} />
+                                    <Camera size={28} className="text-white mb-1" />
+                                    <span className="text-white text-xs font-bold uppercase tracking-wider">Đổi ảnh</span>
+                                </label>
+                            </div>
 
-                                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">{displayName}</h2>
-                                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">@{profile?.username}</p>
-
-                                    <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-800 mb-6 transition-colors">
-                                        <Shield size={16} />
-                                        {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
-                                    </div>
-
-                                    <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 text-left border border-slate-100 dark:border-slate-700/50 space-y-3 transition-colors">
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <Mail size={16} className="text-slate-400 shrink-0" />
-                                            <span className="text-slate-600 dark:text-slate-300 truncate">{profile?.email}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-sm">
-                                            <Clock size={16} className="text-slate-400 shrink-0" />
-                                            <span className="text-slate-600 dark:text-slate-300">Tham gia: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN') : '---'}</span>
-                                        </div>
-                                    </div>
+                            {/* Thông tin User */}
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-white">{displayName}</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">@{profile?.username}</p>
+                            
+                            <div className="inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-1.5 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-800 mb-6 transition-colors">
+                                <Shield size={16} />
+                                {profile?.role === 'admin' ? 'Quản trị viên' : 'Người dùng'}
+                            </div>
+                            
+                            <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 text-left border border-slate-100 dark:border-slate-700/50 space-y-3 transition-colors">
+                                <div className="flex items-center gap-3 text-sm">
+                                    <Mail size={16} className="text-slate-400 shrink-0" />
+                                    <span className="text-slate-600 dark:text-slate-300 truncate">{profile?.email}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm">
+                                    <Clock size={16} className="text-slate-400 shrink-0" />
+                                    <span className="text-slate-600 dark:text-slate-300">Tham gia: {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('vi-VN') : '---'}</span>
                                 </div>
                             </div>
+                            
                         </div>
+                    </div>
+                </div>
 
                         {/* CỘT PHẢI: FORM CHỈNH SỬA THÔNG TIN */}
                         <div className="lg:col-span-2">

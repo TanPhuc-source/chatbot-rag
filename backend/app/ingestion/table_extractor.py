@@ -120,6 +120,12 @@ def _ocr_tables_pass_quality_check(tables: list[ExtractedTable]) -> bool:
         max_row = max(c.row for c in cells)
         max_col = max(c.col for c in cells)
 
+        # Check 0: Phải có ít nhất 2 cột — bảng 1 cột thường là bullet list
+        # bị OCR nhận sai cấu trúc, tên lớp/mục sẽ bị mất → fallback AI Vision
+        if max_col < 1:
+            logger.debug("Quality check FAIL: only 1 column detected (likely bullet list misread as table)")
+            return False
+
         # Check 1: Phải có ít nhất 2 hàng (header + 1 data row)
         if max_row < 1:
             logger.debug("Quality check FAIL: only 1 row detected")
@@ -580,22 +586,31 @@ async def _extract_with_ai_vision(image_bytes: bytes, filename: str) -> list[Ext
     compressed = _compress_for_vision(image_bytes)
     b64 = base64.standard_b64encode(compressed).decode()
 
-    prompt = """Phân tích ảnh này. Nếu có bảng, hãy trích xuất dữ liệu theo định dạng SAU ĐÂY — không dùng Markdown table.
+    prompt = """Phân tích ảnh này. Trích xuất TẤT CẢ thông tin có cấu trúc — bao gồm cả bảng có đường kẻ, danh sách có đầu mục (bullet list), danh sách học phí, danh sách mục tiêu, v.v.
 
 ĐỊNH DẠNG OUTPUT (bắt buộc):
-Với mỗi hàng dữ liệu, viết 1 dòng theo cú pháp:
-[Tên bảng hoặc tiêu đề ảnh] — Tên cột 1: giá trị; Tên cột 2: giá trị; Tên cột 3: giá trị.
+Với mỗi mục dữ liệu, viết 1 dòng theo cú pháp:
+[Tiêu đề hoặc chủ đề chung] — Tên mục: giá trị; Thuộc tính khác: giá trị.
 
-QUY TẮC XỬ LÝ MERGED CELLS (header gộp ô):
-- Nếu header có ô gộp nhiều dòng (ví dụ: "ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ" trải dài 3 dòng), hãy gộp lại thành 1 tên cột duy nhất: "ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ"
-- Không tách header thành nhiều cột riêng nếu chúng thuộc cùng 1 ô gộp
-- Ô trống trong dữ liệu → bỏ qua cặp "tên cột: giá trị" đó
+QUY TẮC:
+- Với danh sách học phí/bullet list: mỗi dòng là 1 mục. Ví dụ "Học phí Tin học cơ bản: 1.680.000" → "[Tên phần] — Lớp: Tin học cơ bản; Học phí: 1.680.000."
+- KHÔNG được bỏ sót tên lớp / tên mục — đây là thông tin quan trọng nhất
+- Với bảng có merged cells: gộp header thành 1 tên cột duy nhất
+- Ô trống → bỏ qua cặp đó
+- Trích xuất CẢ văn bản thường (ghi chú, hướng dẫn bên dưới bảng) vào cuối output, mỗi câu 1 dòng
 
-VÍ DỤ OUTPUT:
-Kế hoạch thi năm 2026 — KỲ THI: Tháng 01; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 17/01/2026; KTHP NGOẠI NGỮ 1,2,3: 17/01/2026; CHỨNG CHỈ ỨNG DỤNG CNTT: 18/01/2026; VSTEP: 24,25/01/2026; THỜI GIAN THU HỒ SƠ VSTEP: 08/12/2025-09/01/2026.
-Kế hoạch thi năm 2026 — KỲ THI: Tháng 02; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 07/02/2026; CHỨNG CHỈ ỨNG DỤNG CNTT: 08/02/2026; VSTEP: 28/02,01/3/2026; THỜI GIAN THU HỒ SƠ VSTEP: 12/01/2026-08/02/2026.
+VÍ DỤ 1 — Bảng lịch thi:
+Kế hoạch thi năm 2026 — KỲ THI: Tháng 01; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 17/01/2026; VSTEP: 24,25/01/2026.
+Kế hoạch thi năm 2026 — KỲ THI: Tháng 02; ĐÁNH GIÁ NĂNG LỰC NGOẠI NGỮ: 07/02/2026; VSTEP: 28/02/2026.
 
-Nếu không có bảng nào: KHÔNG_CÓ_BẢNG
+VÍ DỤ 2 — Danh sách học phí (bullet list):
+Học phí các lớp — Lớp: Tin học cơ bản; Học phí: 1.680.000.
+Học phí các lớp — Lớp: Ôn Tin học cơ bản; Học phí: 1.120.000.
+Học phí các lớp — Lớp: Ngoại ngữ 1; Học phí: 1.440.000.
+Học phí các lớp — Lớp: Ngoại ngữ 2; Học phí: 1.440.000.
+Học phí các lớp — Lớp: Ngoại ngữ 3; Học phí: 1.920.000.
+
+Nếu ảnh hoàn toàn không có thông tin có cấu trúc: KHÔNG_CÓ_BẢNG
 Chỉ trả về các dòng dữ liệu theo định dạng trên, không giải thích thêm."""
 
     # Thử Groq vision

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # ── LLM Provider ──────────────────────────────────────────
     LLM_PROVIDER: Literal["groq", "ollama", "openai", "gemini"] = "groq"
 
+    BASE_URL: str = "http://localhost:8000"
     # Groq
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"

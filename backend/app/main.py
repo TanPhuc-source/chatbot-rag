@@ -5,6 +5,7 @@ from app.config import get_settings
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -38,6 +39,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# ── Trust proxy headers từ ngrok/reverse proxy ────────────────────────────
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 settings = get_settings()
 

@@ -293,56 +293,55 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         }}
       >
         {/* Header */}
-        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: collapsed ? "18px 14px 14px" : "24px 14px 14px", gap: 18, position: "relative" }}>
+        <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", padding: collapsed ? "16px 14px 14px" : "20px 14px 14px", gap: 16, position: "relative", transition: `padding ${T}` }}>
 
           {/* Nút thu gọn (chỉ hiện khi Sidebar đang mở rộng) */}
           {!collapsed && (
             <button
               onClick={onToggle}
-              style={{ position: "absolute", top: 12, right: 12, padding: 6, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)" }}
+              style={{ position: "absolute", top: 14, right: 10, padding: 6, borderRadius: 8, border: "none", background: "transparent", cursor: "pointer", color: "var(--text-muted)", transition: "all 0.18s" }}
               className="hover:bg-[var(--bg-3)] hover:text-[var(--text-primary)]"
+              title="Thu gọn sidebar"
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={16} />
             </button>
           )}
 
           {/* Khu vực Logo & Tiêu đề */}
-          {/* Khu vực Logo & Tiêu đề */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: collapsed ? 0 : 12, transition: "all 0.3s ease" }}>
 
-            {/* Logo to ở trên khi mở rộng, thu nhỏ thành nút khi gập lại */}
+            {/* Logo — khi thu gọn là nút bấm để mở rộng */}
             <div
               onClick={collapsed ? onToggle : undefined}
               style={{
-                width: collapsed ? 44 : 80,
-                height: collapsed ? 44 : 80,
-                borderRadius: collapsed ? "50%" : 20,
-                border: collapsed ? "2px solid var(--border)" : "none",
+                width: collapsed ? 42 : 76,
+                height: collapsed ? 42 : 76,
+                borderRadius: collapsed ? "50%" : 18,
+                border: collapsed ? "2px solid var(--border-mid)" : "none",
                 overflow: "hidden",
                 cursor: collapsed ? "pointer" : "default",
                 padding: collapsed ? 2 : 0,
                 background: "var(--bg-1)",
-                transition: "all 0.3s ease",
-                boxShadow: collapsed ? "none" : "0 8px 24px rgba(0,0,0,0.08)",
+                transition: "all 0.28s cubic-bezier(0.4,0,0.2,1)",
+                boxShadow: collapsed ? "none" : "0 6px 20px rgba(0,0,0,0.08)",
                 flexShrink: 0
               }}
-              className={collapsed ? "hover:scale-105 active:scale-95" : ""}
+              className={collapsed ? "hover:scale-105 active:scale-95 hover:border-[var(--brand)]" : ""}
               title={collapsed ? "Mở rộng Sidebar" : undefined}
             >
-              <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: collapsed ? "50%" : 20 }} />
+              <img src={SCHOOL_INFO.LOGO_URL} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: collapsed ? "50%" : 16 }} />
             </div>
 
             {/* Tên trường & Trung tâm (chỉ hiển thị khi mở rộng) */}
             <div style={{
               ...slideText({ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", width: "100%" }),
-              maxHeight: collapsed ? 0 : 100, /* Thu gọn chiều cao về 0 khi gập sidebar */
+              maxHeight: collapsed ? 0 : 100,
               transition: `max-width ${T}, opacity ${T}, max-height ${T}`
             }}>
-              {/* ĐỔI whiteSpace: "normal" thành "nowrap" ở cả 2 thẻ p */}
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0", lineHeight: 1.4, whiteSpace: "nowrap" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: "0 0 3px 0", lineHeight: 1.4, whiteSpace: "nowrap" }}>
                 {settings.schoolName}
               </p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: "var(--brand)", margin: 0, opacity: 0.9, lineHeight: 1.4, whiteSpace: "nowrap" }}>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, fontWeight: 600, color: "var(--brand)", margin: 0, opacity: 0.85, lineHeight: 1.4, whiteSpace: "nowrap" }}>
                 {settings.schoolDept}
               </p>
             </div>
@@ -351,13 +350,13 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
           <button
             onClick={handleNew}
             title={collapsed ? "Cuộc trò chuyện mới" : undefined}
-            style={{ display: "flex", alignItems: "center", width: "100%", height: 44, overflow: "hidden", background: "var(--bg-1)", border: "1px solid var(--border)", cursor: "pointer", padding: 0, borderRadius: 12, color: "var(--text-primary)", fontSize: 14, fontWeight: 600, transition: "all 0.2s", boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}
+            style={{ display: "flex", alignItems: "center", width: "100%", height: 42, overflow: "hidden", background: "var(--bg-1)", border: "1px solid var(--border)", cursor: "pointer", padding: 0, borderRadius: 11, color: "var(--text-primary)", fontSize: 14, fontWeight: 600, transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
             className="hover:border-[var(--brand)] hover:text-[var(--brand)] hover:shadow-md"
           >
-            <div style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Plus size={20} />
+            <div style={{ width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Plus size={18} />
             </div>
-            <span style={slideText({ paddingLeft: 4 })}>Cuộc trò chuyện mới</span>
+            <span style={slideText({ paddingLeft: 2 })}>Cuộc trò chuyện mới</span>
           </button>
         </div>
 
@@ -407,7 +406,45 @@ export default function Sidebar({ collapsed = false, onToggle, onClose }: Props)
         </nav>
 
         {/* Footer - user profile */}
-
+        <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            onClick={() => { if (!isLoggedIn && !currentUser) { navigate("/login"); onClose?.(); } else { setIsUserMenuOpen(!isUserMenuOpen); } }}
+            title={collapsed ? "Tài khoản" : undefined}
+            style={{ display: "flex", alignItems: "center", cursor: "pointer", padding: collapsed ? 0 : 8, height: collapsed ? 44 : "auto", borderRadius: 14, border: isUserMenuOpen ? "1px solid var(--border)" : "1px solid transparent", background: isUserMenuOpen ? "var(--bg-2)" : "transparent", transition: "all 0.2s" }}
+            className="hover:bg-[var(--bg-2)] hover:border-[var(--border)]"
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-3)", color: "var(--text-secondary)", flexShrink: 0, overflow: "hidden", border: "1px solid var(--border)", transition: `all ${T}` }}>
+              {isLoggedIn || currentUser ? (
+                <img src={avatarSrc} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <User size={20} />
+              )}
+            </div>
+            <div style={slideText({ paddingLeft: 12, flex: 1 })}>
+              {isLoggedIn || currentUser ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {displayName}
+                    </p>
+                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                      {currentUser?.role === "admin" ? "Quản trị viên" : "Người dùng"}
+                    </p>
+                  </div>
+                  <ChevronUp size={18} style={{ color: "var(--text-muted)", transition: "transform 0.2s", transform: isUserMenuOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0 }}>Đăng nhập</p>
+                    <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>Chưa đăng nhập</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </aside>
     </>
   );

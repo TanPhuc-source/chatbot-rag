@@ -82,11 +82,13 @@ async def load_image_bytes(
                 ))
                 logger.info(f"Extracted {len(tables)} table(s) from {filename}")
 
-                # Khi đã có bảng được trích xuất đúng cấu trúc, bỏ chunk OCR raw
-                # vì nó chứa cùng dữ liệu nhưng dạng text lộn xộn không có tên cột
-                # → giữ lại OCR raw chỉ khi không tìm thấy bảng nào
-                if chunks and chunks[0].metadata.get("source_type") == "image_ocr":
-                    logger.debug(f"Dropping raw OCR chunk — table chunk covers {filename}")
+                # Chỉ bỏ OCR raw nếu chunk table đến từ OCR Layer 1 (ocr_lines)
+                # vì khi đó table chunk đã chứa đầy đủ dữ liệu từ ảnh.
+                # Khi dùng AI Vision (ai_vision), giữ lại OCR raw để bảo toàn
+                # các ghi chú, hướng dẫn bên ngoài vùng bảng (Bước 2, LƯU Ý, v.v.)
+                methods = {t.method for t in tables}
+                if "ocr_lines" in methods and chunks and chunks[0].metadata.get("source_type") == "image_ocr":
+                    logger.debug(f"Dropping raw OCR chunk — OCR line table chunk covers {filename}")
                     chunks.pop(0)
 
         except Exception as e:

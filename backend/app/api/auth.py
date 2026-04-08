@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import timedelta, datetime, timezone
 import os
 import shutil
+import logging
 from pathlib import Path
-import imghdr
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -25,6 +25,7 @@ from app.core.limiter import limiter
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+logger = logging.getLogger("avatar_upload")
 
 # ── Schemas ────────────────────────────────────────────────────────────────
 
@@ -167,7 +168,25 @@ UPLOAD_DIR = Path("uploads/avatars")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
-MAX_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Magic bytes dùng để detect loại file thật sự (thay thế imghdr đã bị xóa từ Python 3.13)
+_MAGIC: list[tuple[bytes, str]] = [
+    (b"\xff\xd8\xff", "jpeg"),
+    (b"\x89PNG\r\n\x1a\n", "png"),
+    (b"GIF87a", "gif"),
+    (b"GIF89a", "gif"),
+    (b"RIFF", "webp"),   # cần kiểm tra thêm bytes[8:12]
+]
+
+def _detect_image_type(data: bytes) -> str | None:
+    for magic, fmt in _MAGIC:
+        if data.startswith(magic):
+            if fmt == "webp" and data[8:12] != b"WEBP":
+                return None
+            return fmt
+    return None
+
 
 @router.post("/me/avatar")
 async def upload_avatar(
@@ -175,20 +194,30 @@ async def upload_avatar(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    if "." not in file.filename:
+    logger.warning(f"[AVATAR] filename={file.filename!r}, content_type={file.content_type!r}, user={current_user.username!r}")
+
+    if not file.filename or "." not in file.filename:
+        logger.warning("[AVATAR] REJECT: no extension")
         raise HTTPException(400, detail="File không có phần mở rộng")
 
     ext = file.filename.rsplit(".", 1)[-1].lower()
+    logger.warning(f"[AVATAR] ext={ext!r}")
     if ext not in ALLOWED_EXTS:
+        logger.warning(f"[AVATAR] REJECT: ext not allowed: {ext}")
         raise HTTPException(400, detail=f"Không hỗ trợ định dạng .{ext}. Chỉ cho phép: {', '.join(ALLOWED_EXTS)}")
 
-    content = await file.read(MAX_SIZE + 1)
+    content = await file.read()
+    logger.warning(f"[AVATAR] content length={len(content)}")
     if len(content) > MAX_SIZE:
+        logger.warning("[AVATAR] REJECT: file too large")
         raise HTTPException(400, detail="File quá lớn (tối đa 5MB)")
 
-    detected = imghdr.what(None, h=content[:512])
-    if detected not in ALLOWED_EXTS:
-        raise HTTPException(400, detail="Nội dung file không hợp lệ hoặc bị giả mạo")
+    detected = _detect_image_type(content[:16])
+    logger.warning(f"[AVATAR] detected type={detected!r}")
+    ALLOWED_DETECTED = {"jpeg", "png", "gif", "webp"}
+    if detected not in ALLOWED_DETECTED:
+        logger.warning(f"[AVATAR] REJECT: detected type not allowed: {detected}")
+        raise HTTPException(400, detail=f"Nội dung file không hợp lệ (detected: {detected})")
 
     filename = f"user_{current_user.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
     file_path = UPLOAD_DIR / filename
@@ -201,3 +230,4 @@ async def upload_avatar(
     db.refresh(current_user)
 
     return {"message": "Avatar đã được cập nhật", "avatar_url": current_user.avatar_url}
+

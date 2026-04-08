@@ -80,7 +80,7 @@ function RootRedirect() {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthInitializer>
           <Routes>
             <Route path="/" element={<RootRedirect />} />

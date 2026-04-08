@@ -80,8 +80,8 @@ def _is_chitchat(query: str) -> bool:
 
 
 # ── Ambiguous query detection ──────────────────────────────────────────────────
-# Các câu hỏi mơ hồ, phụ thuộc context hội thoại, cần rewrite trước khi search
 _AMBIGUOUS_PATTERNS = [
+    # Patterns cũ
     r"^còn\s",
     r"^vậy\s",
     r"^thế\s",
@@ -89,6 +89,17 @@ _AMBIGUOUS_PATTERNS = [
     r"còn\s.+thì sao",
     r"^nếu vậy",
     r"còn.+thì",
+
+    # ✅ Thêm mới — câu hỏi thiếu chủ thể rõ ràng
+    r"^(phí|học phí|lệ phí|chi phí).{0,20}(bao nhiêu|là bao|như thế nào|không)",
+    r"^(thời gian|thời hạn|hạn nộp|deadline).{0,20}(là|bao lâu|khi nào)",
+    r"^(điều kiện|yêu cầu|cần gì|cần những gì)",
+    r"^(hồ sơ|giấy tờ|tài liệu).{0,20}(gồm|gồm những|cần|bao gồm)",
+    r"^(ở đâu|địa điểm|địa chỉ)",
+    r"^(khi nào|lúc nào|mấy giờ|ngày nào)",
+    r"^(như thế nào|cách nào|làm sao)",
+    r"^(có.{0,10}không\??)$",          # "Có miễn phí không?"
+    r"(của nó|của họ|của trường)\s",    # đại từ trỏ về chủ thể trước
 ]
 _AMBIGUOUS_RE = re.compile("|".join(_AMBIGUOUS_PATTERNS), re.IGNORECASE | re.UNICODE)
 
@@ -96,7 +107,7 @@ _AMBIGUOUS_RE = re.compile("|".join(_AMBIGUOUS_PATTERNS), re.IGNORECASE | re.UNI
 def _is_ambiguous_query(query: str) -> bool:
     """Trả về True nếu câu hỏi mơ hồ, cần history để hiểu đúng."""
     q = query.strip()
-    return len(q.split()) <= 10 and bool(_AMBIGUOUS_RE.search(q))
+    return len(q.split()) <= 15 and bool(_AMBIGUOUS_RE.search(q))
 
 
 async def _rewrite_query_with_context(

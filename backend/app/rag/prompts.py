@@ -4,6 +4,7 @@ System prompt được load từ DB (BotSettings) nếu có, fallback về defau
 """
 from __future__ import annotations
 
+from app.config import get_settings
 from app.rag.retriever import RetrievedChunk
 
 
@@ -102,8 +103,9 @@ def _get_active_forms_text() -> str:
                 ]
                 for f in forms:
                     desc = f" — {f.description}" if f.description else ""
+                    settings = get_settings()
                     lines.append(
-                        f"- [{f.display_name}](http://localhost:8000/forms/{f.id}/download){desc}"
+                        f"- [{f.display_name}]({settings.BASE_URL}/forms/{f.id}/download){desc}"
                     )
                 _forms_cache["text"] = "\n".join(lines)
         finally:

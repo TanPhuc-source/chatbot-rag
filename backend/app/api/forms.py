@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import os
@@ -66,7 +65,16 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)) -> Option
     except JWTError:
         return None
 
-def _to_response(form: models.FormTemplate) -> FormResponse:
+def _get_base_url(request: Request) -> str:
+    """Lấy base URL đúng kể cả khi đi qua ngrok/reverse proxy."""
+    # Ngrok và proxy gửi header X-Forwarded-Proto + Host
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    return f"{proto}://{host}"
+
+
+def _to_response(form: models.FormTemplate, request: Request) -> FormResponse:
+    base_url = _get_base_url(request)
     return FormResponse(
         id=form.id,
         display_name=form.display_name,
@@ -74,7 +82,7 @@ def _to_response(form: models.FormTemplate) -> FormResponse:
         filename=form.filename,
         file_type=form.file_type,
         is_active=form.is_active,
-        download_url=f"/forms/{form.id}/download",
+        download_url=f"{base_url}/forms/{form.id}/download",
         created_at=form.created_at.isoformat(),
     )
 
@@ -106,27 +114,14 @@ def list_forms(
         q = q.filter(models.FormTemplate.is_active == True)
         
     forms = q.order_by(models.FormTemplate.created_at.desc()).all()
-    return [_to_response(f) for f in forms]
+    return [_to_response(f, request) for f in forms]
 
-@router.get("", response_model=list[FormResponse])
-def list_forms(
-    include_inactive: bool = False,
-    db: Session = Depends(get_db),
-):
-    """
-    Public endpoint — trả danh sách biểu mẫu active.
-    Bot dùng endpoint này để biết có những form nào để trả link.
-    Truyền ?include_inactive=true (admin) để thấy cả form đang ẩn.
-    """
-    q = db.query(models.FormTemplate)
-    if not include_inactive:
-        q = q.filter(models.FormTemplate.is_active == True)
-    forms = q.order_by(models.FormTemplate.created_at.desc()).all()
-    return [_to_response(f) for f in forms]
+
 
 
 @router.post("/upload", response_model=FormResponse, status_code=status.HTTP_201_CREATED)
 async def upload_form(
+    request: Request,
     display_name: str = Form(...),
     file: UploadFile = File(...),
     description: Optional[str] = Form(None),
@@ -144,7 +139,7 @@ async def upload_form(
     unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
     file_path = FORMS_DIR / unique_filename
 
-    with open(file_path, "wb", encoding="utf-8") as buffer:
+    with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     form = models.FormTemplate(
@@ -158,13 +153,14 @@ async def upload_form(
     db.add(form)
     db.commit()
     db.refresh(form)
-    return _to_response(form)
+    return _to_response(form, request)
 
 
 @router.patch("/{form_id}", response_model=FormResponse)
 def update_form(
     form_id: int,
     body: FormUpdate,
+    request: Request,
     current_user: models.User = Depends(get_admin_user),
     db: Session = Depends(get_db),
 ):
@@ -179,7 +175,7 @@ def update_form(
 
     db.commit()
     db.refresh(form)
-    return _to_response(form)
+    return _to_response(form, request)
 
 
 @router.delete("/{form_id}", status_code=status.HTTP_204_NO_CONTENT)

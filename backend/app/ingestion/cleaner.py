@@ -32,7 +32,7 @@ from app.utils.logger import logger
 MIN_CHUNK_LENGTH = 80
 
 # Nếu tỉ lệ ký tự "có nghĩa" (chữ + số) thấp hơn ngưỡng này → chunk rác
-MIN_ALPHANUMERIC_RATIO = 0.40
+MIN_ALPHANUMERIC_RATIO = 0.25
 
 # Nếu chunk chứa ít hơn ngưỡng này từ có nghĩa (len > 1) → quá sparse
 MIN_MEANINGFUL_WORDS = 5
@@ -209,7 +209,12 @@ def clean_chunks(chunks: list[LoadedChunk]) -> list[LoadedChunk]:
             skipped_short += 1
             continue
 
-        if _is_garbage_chunk(clean_content):
+        # Chunk từ bảng/ảnh có cấu trúc: bỏ qua garbage check vì chứa nhiều
+        # ký tự đặc biệt (—, ;, ., số tiền) làm alphanumeric ratio thấp
+        is_structured = chunk.metadata.get("source_type") in (
+            "image_table", "image_ocr", "scanned_pdf_table"
+        )
+        if not is_structured and _is_garbage_chunk(clean_content):
             skipped_garbage += 1
             continue
 
